@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: parsers + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Parser and sniffer tests
+        run: node tools/test-lyrics.mjs
+
+      - name: Build production and dev packages
+        run: node tools/build.mjs
+
+      - name: Verify manifest wiring
+        run: |
+          node - <<'NODE'
+          const { readFileSync, existsSync } = require('node:fs');
+          const manifest = JSON.parse(readFileSync('dist/prod/manifest.json', 'utf8'));
+          const files = [
+            ...manifest.content_scripts.flatMap((c) => [...(c.js || []), ...(c.css || [])]),
+            manifest.background.service_worker,
+            manifest.action.default_popup,
+            ...Object.values(manifest.icons),
+          ];
+          const missing = files.filter((f) => !existsSync('dist/prod/' + f));
+          if (missing.length) {
+            console.error('missing from package:', missing);
+            process.exit(1);
+          }
+          if (/127\.0\.0\.1|localhost/.test(JSON.stringify(manifest))) {
+            console.error('dev origins leaked into the production manifest');
+            process.exit(1);
+          }
+          console.log(`manifest ok: ${files.length} referenced files present, prod scope clean`);
+          NODE
+
+      - name: Upload built extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: spicy-lyrics-chrome
+          path: dist/spicy-lyrics-chrome-*.zip
+          if-no-files-found: error

@@ -4,6 +4,7 @@
 
 Spotify Web Player がデフォルトで取得・表示している歌詞をそのまま読み取り、デスクトップ版と同じ「単語ごとに光る歌詞ページ」として描画する。
 
+[![CI](https://github.com/4uthen7/spicy-lyrics-chrome/actions/workflows/ci.yml/badge.svg)](https://github.com/4uthen7/spicy-lyrics-chrome/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/4uthen7/spicy-lyrics-chrome?label=release)](https://github.com/4uthen7/spicy-lyrics-chrome/releases/latest)
 [![license](https://img.shields.io/github/license/4uthen7/spicy-lyrics-chrome)](LICENSE)
 ![manifest](https://img.shields.io/badge/Manifest-V3-blue)
