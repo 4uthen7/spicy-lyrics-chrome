@@ -1,0 +1,10 @@
+# Build output (see Releases for the packaged extension)
+dist/
+
+# Tooling
+node_modules/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

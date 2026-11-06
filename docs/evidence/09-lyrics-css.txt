@@ -1,0 +1,14 @@
+# Evidence: web-player.9cf426b0.css - lyric classes (build-specific hashed names)
+#
+aMqx9ZQax6C3ZIaMn2){margin-bottom:1.4em}.MFEBmMwUCW5Qmg8VwGim.xp5WpqjB3u9hFHWKn2aE{view-timeline:--scroll-to-viewport-button-anim block;color:var(--lyrics-color-active)}
+ block;color:var(--lyrics-color-active)}.MFEBmMwUCW5Qmg8VwGim.NToFVceZLenbhmfcDb3s{cursor:pointer;transition:color .1s ease-out,opacity .1s ease-out}
+wGim{color:var(--lyrics-color-inactive)}.MFEBmMwUCW5Qmg8VwGim:not(.JraMqx9ZQax6C3ZIaMn2){margin-bottom:.6em}
+st){.KYyGriwfS3WzAde3nDai{display:none}}.MFEBmMwUCW5Qmg8VwGim{color:var(--lyrics-color-inactive)}
+28}.Ju3MlqHjm61qLN2ULgug{color:#b3b3b3}.bm5I7yGVN8NXt6vH9eiC{grid-template-rows:1fr;width:100%;height:calc(100vh - 73px);margin-top:0;display:grid}
+{grid-area:1/1/-1/-1;align-self:center}.OaXGHrbiWJI_moHj0__w{background-color:var(--lyrics-color-background);grid-area:1/1/-1/-1;transition:background-color .25s ease-out}
+
+# Global lyric CSS variables set by the lyrics view root:
+  --lyrics-color-active, --lyrics-color-inactive, --lyrics-color-passed, --lyrics-color-background, --lyrics-color-messaging, --show-gradient-over-lyrics
+
+# No background-clip/-webkit-background-clip rules exist in this stylesheet (grep: only padding-box/content-box
+# for unrelated components) -> the web player does NOT word-by-word fill lyric text.

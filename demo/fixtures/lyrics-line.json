@@ -1,0 +1,33 @@
+{
+  "colors": {
+    "background": "#0a0a0d",
+    "text": "#f5f5f7",
+    "highlightText": "#ff5c8a"
+  },
+  "lyrics": {
+    "syncType": "LINE_SYNCED",
+    "provider": "Musixmatch",
+    "providerDisplayName": "Musixmatch",
+    "language": "en",
+    "lines": [
+      {
+        "startTimeMs": "0",
+        "endTimeMs": "0",
+        "words": "first line opens quiet",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "4200",
+        "endTimeMs": "8000",
+        "words": "second line follows it home",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "8600",
+        "endTimeMs": "12000",
+        "words": "third line closes the frame",
+        "syllables": []
+      }
+    ]
+  }
+}

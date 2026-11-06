@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Neon Paralysis — song by MIRA | Spotify</title>
+<link rel="stylesheet" href="./demo.css" />
+<style>
+  /* Extra rules only needed by the 2026-build mock. */
+  .npv1 { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .npv1-title { color: #fff; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .npv1-artists { display: flex; gap: 6px; }
+  .npv1-artists a { color: var(--muted); font-size: 12px; text-decoration: none; }
+  .coverart { background: none; border: 0; padding: 0; cursor: pointer; }
+  .coverart img { width: 56px; height: 56px; border-radius: 4px; object-fit: cover; display: block; }
+  .hiddenrange { position: absolute; width: 4px; height: 4px; opacity: 0; pointer-events: none; }
+  .lyricLine { font-size: 26px; font-weight: 700; text-align: center; opacity: .42; transition: opacity .25s, transform .25s; transform: scale(.98); color: #fff; }
+  .lyricLine.passeded { opacity: .38; }
+  .lyricLine.upcominged { opacity: .34; }
+  .lyricLine.actived { opacity: 1; transform: scale(1.03); text-shadow: 0 0 26px rgba(255,255,255,.25); }
+  .readalong { flex: 1 1 auto; overflow: auto; padding: 80px 20px 120px; display: flex; flex-direction: column; gap: 18px; align-items: center; scrollbar-width: none; }
+  .readalong::-webkit-scrollbar { display: none; }
+</style>
+</head>
+<body>
+<!--
+  Second harness: mirrors the DOM shape the 2026 web-player build actually
+  renders (verified in docs/evidence/04-live-dom.txt). Differences from
+  demo/index.html on purpose:
+    - .main-view-container is a CLASS, no data-testid
+    - the now-playing title link points at /album/<id>, there is no /track/ href
+    - the seek position lives in a hidden input[type=range] (ms), not aria-valuenow
+    - play/pause is identified by the button's svg path, not only aria-label
+    - native lyrics use data-testid="lyrics-line" and a single unique active class
+-->
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#1ed760"/><path d="M6.9 9.3c3.3-.9 7.1-.6 9.9 1.1M7.6 12.6c2.7-.7 5.7-.4 7.8 1M8.4 15.7c2.1-.5 4.2-.3 5.7.8" stroke="#000" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+      <span>Spotify</span>
+    </div>
+    <div class="topbar-center">
+      <button class="nav-pill is-active" type="button">Home</button>
+      <button class="nav-pill" type="button">Search</button>
+    </div>
+    <div class="topbar-right"><span class="demo-badge">DEMO · 2026 DOM</span></div>
+  </header>
+
+  <div class="body">
+    <aside class="sidebar">
+      <div class="sidebar-block">
+        <div class="sidebar-title">Your Library</div>
+        <div class="sidebar-item is-active">Nightdrive</div>
+        <div class="sidebar-item">Late Night Signal</div>
+      </div>
+    </aside>
+
+    <main class="main main-view-container" data-testid="main-view-container">
+      <section class="content" id="home-view">
+        <div class="hero">
+          <img class="hero-cover" id="hero-cover" src="./fixtures/cover-1.png" alt="" />
+          <div class="hero-meta">
+            <div class="hero-kicker">PLAYLIST</div>
+            <h1 class="hero-title" id="hero-title">Nightdrive</h1>
+            <div class="hero-sub" id="hero-sub">MIRA, Kaito Ren · 3 songs</div>
+          </div>
+        </div>
+        <div class="tracklist" id="tracklist"></div>
+      </section>
+
+      <section class="lyrics-page" id="lyrics-page" data-testid="lyrics-page" hidden>
+        <div class="lyrics-header">
+          <div class="lyrics-kicker">LYRICS</div>
+          <div class="lyrics-track" id="lyrics-track-title">Neon Paralysis</div>
+        </div>
+        <div class="readalong" data-testid="read-along-scroll-container" id="lyrics-container" role="region" aria-label="Lyrics"></div>
+      </section>
+    </main>
+
+    <aside class="rightbar">
+      <div class="rightbar-title">Now playing</div>
+      <img class="rightbar-cover" id="rightbar-cover" src="./fixtures/cover-1.png" alt="" />
+      <div class="rightbar-track" id="rightbar-title">Neon Paralysis</div>
+      <div class="rightbar-artist" id="rightbar-artist">MIRA / Kaito Ren</div>
+      <div class="rightbar-note">2026-build DOM shape: class-based main view, hidden range input for position, lyrics-line testids, no /track/ href in the player bar, svg-path play state.</div>
+    </aside>
+  </div>
+
+  <aside class="playerbar" data-testid="now-playing-bar" aria-label="Now playing bar">
+    <div class="playerbar-left">
+      <div class="npv1" data-testid="now-playing-widget" role="region" aria-label="Now playing">
+        <button class="coverart" type="button" data-testid="cover-art-button" aria-label="Now playing view">
+          <img id="np-cover" src="./fixtures/cover-1.png" alt="" />
+        </button>
+        <div class="np-text">
+          <a class="np-title npv1-title" id="np-title" data-testid="context-item-link" href="/album/7C2z1VtFjq7Lm3Ck5Vw9Td"><span data-testid="context-item-info-title">Neon Paralysis</span></a>
+          <div data-testid="context-item-info-subtitles" class="npv1-artists" id="np-artists">
+            <a href="/artist/mira" data-testid="context-item-info-artist">MIRA</a>
+            <a href="/artist/kaito-ren" data-testid="context-item-info-artist">Kaito Ren</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="playerbar-center">
+      <div class="controls">
+        <button class="icon-btn" type="button" id="prev" aria-label="Previous">⏮</button>
+        <button class="playpause" type="button" id="playpause" data-testid="control-button-playpause" aria-label="一時停止" data-is-icon-only="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path id="pp-path" d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7z"/></svg>
+        </button>
+        <button class="icon-btn" type="button" id="next" aria-label="Next">⏭</button>
+      </div>
+      <div class="progress-row">
+        <span class="time" data-testid="playback-position" id="playback-position" data-test-position="0">0:00</span>
+        <div data-testid="playback-progressbar" id="playback-progressbar" style="flex:1 1 auto; position:relative;">
+          <label class="hiddenrange">
+            <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Change progress</span>
+            <input type="range" id="seek-range" min="0" max="133000" step="1" value="0" aria-valuetext="0:00/2:13" style="position:absolute;width:1px;height:1px;opacity:0" />
+          </label>
+          <div class="progress" id="progress-bar" data-testid="progress-bar" style="--progress-bar-transform: 0%; --hover-bar-transform: 0%;">
+            <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+            <div class="progress-thumb" id="progress-thumb" style="left:0%"></div>
+            <div data-testid="progress-bar-handle" id="progress-handle" style="position:absolute;top:50%;left:0%;width:12px;height:12px;margin-left:-6px;margin-top:-6px;border-radius:50%;background:#fff;opacity:0"></div>
+          </div>
+        </div>
+        <span class="time" data-testid="playback-duration" id="playback-duration">2:13</span>
+      </div>
+    </div>
+
+    <div class="playerbar-right">
+      <button class="lyrics-btn" type="button" id="lyrics-toggle" data-testid="lyrics-button" aria-label="Lyrics" aria-pressed="false">Lyrics</button>
+    </div>
+  </aside>
+</div>
+
+<script src="./mock-player-real.js"></script>
+</body>
+</html>

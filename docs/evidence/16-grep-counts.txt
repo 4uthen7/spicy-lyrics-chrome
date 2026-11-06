@@ -1,0 +1,28 @@
+# Evidence: literal grep counts over the shipped web-player files downloaded for this recon.
+# Files: web-player.73b73c08.js, encore~web-player.bde3d4f4.js, vendor~web-player.5858da05.js, dwp-now-playing-bar.0af8a902.js, 8153.ab3c6bb5.js, 9398.22ff7630.js, 5424.16cb1d45.js, 4076.c8b69942.js, 6454.025fa50a.js, 1186.99674601.js
+# Counts are substring occurrences (not unique lines); "0" everywhere means the literal is absent from the app code.
+
+| term | web-player | encore~web | vendor~web | dwp-now-pl | 8153 | 9398 | 5424 | 4076 | 6454 | 1186 | total |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `fullscreen-lyric` | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `lyrics-container` | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `lyrics-page` | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `now-playing-widget` | 6 | 0 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
+| `context-item-info-title` | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
+| `context-item-info-artist` | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2 |
+| `context-item-info-album` | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `cover-art-image` | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
+| `playback-position` | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
+| `playback-duration` | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
+| `progress-bar` | 0 | 3 | 0 | 0 | 20 | 0 | 0 | 0 | 1 | 0 | 24 |
+| `control-button-playpause` | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 1 |
+| `main-view-container` | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 6 |
+| `right-sidebar` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
+| `now-playing-bar` | 7 | 0 | 0 | 8 | 0 | 2 | 0 | 0 | 0 | 0 | 17 |
+| `now-playing-view` | 31 | 0 | 1 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 35 |
+| `color-lyrics` | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
+| `spclient.wg.spotify.com` | 9 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 14 |
+| `get_access_token` | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `App-Platform` | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 7 |
+| `ScClient` | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `lyrics-line` | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Neon Paralysis — song by MIRA | Spotify</title>
+<link rel="stylesheet" href="./demo.css" />
+</head>
+<body>
+<!--
+  Demo harness: reproduces the Spotify web player shell closely enough for the
+  extension's real player observer, DOM lyrics scraper and fetch sniffer to run
+  unmodified. It is not Spotify; the tracks and lyrics are fictional fixtures.
+-->
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#1ed760"/><path d="M6.9 9.3c3.3-.9 7.1-.6 9.9 1.1M7.6 12.6c2.7-.7 5.7-.4 7.8 1M8.4 15.7c2.1-.5 4.2-.3 5.7.8" stroke="#000" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+      <span>Spotify</span>
+    </div>
+    <div class="topbar-center">
+      <button class="nav-pill is-active" type="button">Home</button>
+      <button class="nav-pill" type="button">Search</button>
+    </div>
+    <div class="topbar-right"><span class="demo-badge">DEMO HARNESS</span></div>
+  </header>
+
+  <div class="body">
+    <aside class="sidebar" data-testid="left-sidebar">
+      <div class="sidebar-block">
+        <div class="sidebar-title">Your Library</div>
+        <div class="sidebar-item is-active">Neon Drive</div>
+        <div class="sidebar-item">Late Night Signal</div>
+        <div class="sidebar-item">Glasshouse</div>
+        <div class="sidebar-item">Paper Radio</div>
+      </div>
+    </aside>
+
+    <main class="main" data-testid="main-view-container">
+      <section class="content" id="home-view">
+        <div class="hero">
+          <img class="hero-cover" id="hero-cover" data-testid="cover-art-image" src="./fixtures/cover-1.png" alt="" />
+          <div class="hero-meta">
+            <div class="hero-kicker">PLAYLIST</div>
+            <h1 class="hero-title" id="hero-title">Nightdrive</h1>
+            <div class="hero-sub" id="hero-sub">MIRA, Kaito Ren · 3 songs</div>
+          </div>
+        </div>
+        <div class="tracklist" id="tracklist"></div>
+      </section>
+
+      <section class="lyrics-page" id="lyrics-page" data-testid="lyrics-page" hidden>
+        <div class="lyrics-header">
+          <div class="lyrics-kicker">LYRICS</div>
+          <div class="lyrics-track" id="lyrics-track-title">Neon Paralysis</div>
+        </div>
+        <div class="lyrics-container" id="lyrics-container" data-testid="lyrics-container" role="region" aria-label="Lyrics"></div>
+      </section>
+    </main>
+
+    <aside class="rightbar" data-testid="right-sidebar">
+      <div class="rightbar-title">Now playing</div>
+      <img class="rightbar-cover" id="rightbar-cover" src="./fixtures/cover-1.png" alt="" />
+      <div class="rightbar-track" id="rightbar-title">Neon Paralysis</div>
+      <div class="rightbar-artist" id="rightbar-artist">MIRA / Kaito Ren</div>
+      <div class="rightbar-note">The extension overlay renders over the main view, exactly where Spotify's own lyrics page sits.</div>
+    </aside>
+  </div>
+
+  <footer class="playerbar" data-testid="now-playing-bar">
+    <div class="playerbar-left">
+      <div class="nowplaying" data-testid="now-playing-widget">
+        <img class="np-cover" id="np-cover" data-testid="cover-art-image" src="./fixtures/cover-1.png" alt="" />
+        <div class="np-text">
+          <a class="np-title" id="np-title" data-testid="context-item-info-title" href="/track/4cOdK2wGLETKBW3PvgPWqT">Neon Paralysis</a>
+          <a class="np-artist" id="np-artist" data-testid="context-item-info-artist" href="/artist/mira">MIRA / Kaito Ren</a>
+          <a class="np-album" id="np-album" data-testid="context-item-info-album" href="/album/nightdrive">Nightdrive</a>
+        </div>
+        <button class="icon-btn heart" type="button" title="Save" aria-label="Save to Your Library">♡</button>
+      </div>
+    </div>
+
+    <div class="playerbar-center">
+      <div class="controls">
+        <button class="icon-btn" type="button" id="prev" aria-label="Previous">⏮</button>
+        <button class="playpause" type="button" id="playpause" data-testid="control-button-playpause" aria-label="Pause">⏸</button>
+        <button class="icon-btn" type="button" id="next" aria-label="Next">⏭</button>
+      </div>
+      <div class="progress-row">
+        <span class="time" data-testid="playback-position" id="playback-position">0:00</span>
+        <div class="progress" data-testid="progress-bar" id="progress-bar" role="slider" tabindex="0"
+             aria-label="Change progress" aria-valuemin="0" aria-valuemax="133000" aria-valuenow="0">
+          <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+          <div class="progress-thumb" id="progress-thumb" style="left:0%"></div>
+        </div>
+        <span class="time" data-testid="playback-duration" id="playback-duration">2:13</span>
+      </div>
+    </div>
+
+    <div class="playerbar-right">
+      <button class="lyrics-btn" type="button" id="lyrics-toggle" title="Lyrics">Lyrics</button>
+      <button class="icon-btn" type="button" aria-label="Queue">☰</button>
+    </div>
+  </footer>
+</div>
+
+<script src="./mock-player.js"></script>
+</body>
+</html>

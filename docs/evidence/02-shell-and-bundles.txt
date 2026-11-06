@@ -1,0 +1,64 @@
+# Evidence: open.spotify.com HTML shell served to a LOGGED-OUT visitor
+# curl GET https://open.spotify.com/ with desktop Chrome 157 UA -> HTTP 200, 168891 bytes text/html.
+# => YES: the full web-player application shell is served without login (the app runs, renders home page,
+#    player bar, login/signup buttons; playback and lyrics require auth).
+#
+# <script src> tags in the logged-out shell (verbatim):
+<script src="https://www.google.com/recaptcha/enterprise.js?render=6LfCVLAUAAAAALFwwRnnCJ12DalriUGbj8FW_J39" async="" defer="">
+<script defer="" src="https://open.spotifycdn.com/cdn/js/gtm.96d60fd6.js">
+<script defer="" src="https://open.spotifycdn.com/cdn/js/retargeting-pixels.02346b5d.js">
+<script src="https://open.spotifycdn.com/cdn/build/web-player/web-player.73b73c08.js">
+<script src="https://open.spotifycdn.com/cdn/build/web-player/vendor~web-player.5858da05.js">
+<script src="https://open.spotifycdn.com/cdn/build/web-player/encore~web-player.bde3d4f4.js">
+
+# <script id="appServerConfig" type="text/plain"> is base64 JSON. Decoded:
+{
+ "appName": "web_player_prototype",
+ "market": "JP",
+ "locale": {
+  "locale": "en",
+  "rtl": false,
+  "textDirection": "ltr"
+ },
+ "isPremium": false,
+ "correlationId": "a849940a-1716-45ff-bc9c-708c9c843404",
+ "isAnonymous": true,
+ "gtmId": "GTM-PZHN3VD",
+ "pipResources": {
+  "scripts": [
+   "https://open.spotifycdn.com/cdn/build/web-player/vendor~web-player.5858da05.js",
+   "https://open.spotifycdn.com/cdn/build/web-player/pip-mini-player.a62c3d3a.js"
+  ],
+  "styles": [
+   "https://open.spotifycdn.com/cdn/build/web-player/pip-mini-player.620bdaff.css"
+  ]
+ },
+ "retargetingPixels": null,
+ "recaptchaWebPlayerFraudSiteKey": "6LfCVLAUAAAAALFwwRnnCJ12DalriUGbj8FW_J39",
+ "serverTime": 1793937815,
+ "clientVersion": "1.3.10.15.g21d156ee0039",
+ "buildVersion": "web-player_2026-11-06_1793928274424_21d156ee0039",
+ "buildDate": "2026-11-06"
+}
+
+# CDN URLs referenced by the shell:
+https://open.spotifycdn.com
+https://open.spotifycdn.com/cdn/build/web-player/encore~web-player.bde3d4f4.js
+https://open.spotifycdn.com/cdn/build/web-player/vendor~web-player.5858da05.js
+https://open.spotifycdn.com/cdn/build/web-player/web-player.73b73c08.js
+https://open.spotifycdn.com/cdn/build/web-player/web-player.9cf426b0.css
+https://open.spotifycdn.com/cdn/generated-locales/web-player/en.d77c2d39.json
+https://open.spotifycdn.com/cdn/generated/manifest-web-player.1609946b.json
+https://open.spotifycdn.com/cdn/generated/opensearch.4cd8879e.xml
+https://open.spotifycdn.com/cdn/images/favicon.0f31d2ea.ico
+https://open.spotifycdn.com/cdn/images/favicon16.1c487bff.png
+https://open.spotifycdn.com/cdn/images/favicon32.b64ecc03.png
+https://open.spotifycdn.com/cdn/js/gtm.96d60fd6.js
+https://open.spotifycdn.com/cdn/js/retargeting-pixels.02346b5d.js
+
+# Lazy webpack chunk map lives in the runtime at the end of web-player.73b73c08.js:
+#   u.p="https://open.spotifycdn.com/cdn/build/web-player/"
+#   u.u=<id>=>(<name map>)[id]+"."+(<hash map>)[id]+".js"
+# Example resolved chunk: 3319 -> "dwp-now-playing-bar"."0af8a902".js
+#   https://open.spotifycdn.com/cdn/build/web-player/dwp-now-playing-bar.0af8a902.js (200, 59352 bytes)
+# Player-bar/lyrics chunks are LAZY: they are not in the three initial bundles and only load after hydration.

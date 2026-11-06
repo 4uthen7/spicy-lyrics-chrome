@@ -1,0 +1,1829 @@
+{
+  "lyrics": {
+    "syncType": "LINE_SYNCED",
+    "lines": [
+      {
+        "startTimeMs": "1000",
+        "endTimeMs": "4864",
+        "words": "city lights are bleeding through the blinds",
+        "syllables": [
+          {
+            "startTimeMs": "1000",
+            "endTimeMs": "1209",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "1209",
+            "endTimeMs": "1418",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "1418",
+            "endTimeMs": "1627",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "1627",
+            "endTimeMs": "1835",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "1835",
+            "endTimeMs": "2044",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "2044",
+            "endTimeMs": "2201",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "2201",
+            "endTimeMs": "2358",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "2358",
+            "endTimeMs": "2567",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "2567",
+            "endTimeMs": "2776",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "2776",
+            "endTimeMs": "2984",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "2984",
+            "endTimeMs": "3193",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "3193",
+            "endTimeMs": "3376",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "3376",
+            "endTimeMs": "3559",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "3559",
+            "endTimeMs": "3741",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "3741",
+            "endTimeMs": "3924",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "3924",
+            "endTimeMs": "4081",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "4081",
+            "endTimeMs": "4237",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "4237",
+            "endTimeMs": "4446",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "4446",
+            "endTimeMs": "4655",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "4655",
+            "endTimeMs": "4864",
+            "numChars": 2
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "5200",
+        "endTimeMs": "9432",
+        "words": "i keep the radio on just to hear the noise",
+        "syllables": [
+          {
+            "startTimeMs": "5200",
+            "endTimeMs": "5328",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "5328",
+            "endTimeMs": "5585",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "5585",
+            "endTimeMs": "5841",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "5841",
+            "endTimeMs": "6034",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "6034",
+            "endTimeMs": "6226",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "6226",
+            "endTimeMs": "6440",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "6440",
+            "endTimeMs": "6653",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "6653",
+            "endTimeMs": "6867",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "6867",
+            "endTimeMs": "7124",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "7124",
+            "endTimeMs": "7381",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "7381",
+            "endTimeMs": "7637",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "7637",
+            "endTimeMs": "7893",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "7893",
+            "endTimeMs": "8150",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "8150",
+            "endTimeMs": "8406",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "8406",
+            "endTimeMs": "8599",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "8599",
+            "endTimeMs": "8791",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "8791",
+            "endTimeMs": "9005",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "9005",
+            "endTimeMs": "9218",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "9218",
+            "endTimeMs": "9432",
+            "numChars": 1
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "9800",
+        "endTimeMs": "13296",
+        "words": "every signal bends around me",
+        "syllables": [
+          {
+            "startTimeMs": "9800",
+            "endTimeMs": "10043",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "10043",
+            "endTimeMs": "10285",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "10285",
+            "endTimeMs": "10528",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "10528",
+            "endTimeMs": "10819",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "10819",
+            "endTimeMs": "11111",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "11111",
+            "endTimeMs": "11402",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "11402",
+            "endTimeMs": "11645",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "11645",
+            "endTimeMs": "11888",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "11888",
+            "endTimeMs": "12131",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "12131",
+            "endTimeMs": "12422",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "12422",
+            "endTimeMs": "12714",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "12714",
+            "endTimeMs": "13005",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "13005",
+            "endTimeMs": "13296",
+            "numChars": 2
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "13600",
+        "endTimeMs": "18384",
+        "words": "static in the shape of your voice",
+        "syllables": [
+          {
+            "startTimeMs": "13600",
+            "endTimeMs": "13954",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "13954",
+            "endTimeMs": "14309",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "14309",
+            "endTimeMs": "14663",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "14663",
+            "endTimeMs": "15017",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "15017",
+            "endTimeMs": "15283",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "15283",
+            "endTimeMs": "15549",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "15549",
+            "endTimeMs": "15844",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "15844",
+            "endTimeMs": "16140",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "16140",
+            "endTimeMs": "16435",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "16435",
+            "endTimeMs": "16789",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "16789",
+            "endTimeMs": "17144",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "17144",
+            "endTimeMs": "17498",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "17498",
+            "endTimeMs": "17793",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "17793",
+            "endTimeMs": "18089",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "18089",
+            "endTimeMs": "18384",
+            "numChars": 1
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "19400",
+        "endTimeMs": "22528",
+        "words": "neon paralysis",
+        "syllables": [
+          {
+            "startTimeMs": "19400",
+            "endTimeMs": "19881",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "19881",
+            "endTimeMs": "20362",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "20362",
+            "endTimeMs": "21084",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "21084",
+            "endTimeMs": "21806",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "21806",
+            "endTimeMs": "22528",
+            "numChars": 3
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "22800",
+        "endTimeMs": "26296",
+        "words": "hold me in the frequency",
+        "syllables": [
+          {
+            "startTimeMs": "22800",
+            "endTimeMs": "23150",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "23150",
+            "endTimeMs": "23499",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "23499",
+            "endTimeMs": "23849",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "23849",
+            "endTimeMs": "24198",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "24198",
+            "endTimeMs": "24461",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "24461",
+            "endTimeMs": "24723",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "24723",
+            "endTimeMs": "25247",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "25247",
+            "endTimeMs": "25772",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "25772",
+            "endTimeMs": "26296",
+            "numChars": 3
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "26600",
+        "endTimeMs": "29912",
+        "words": "neon paralysis",
+        "syllables": [
+          {
+            "startTimeMs": "26600",
+            "endTimeMs": "27110",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "27110",
+            "endTimeMs": "27619",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "27619",
+            "endTimeMs": "28383",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "28383",
+            "endTimeMs": "29148",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "29148",
+            "endTimeMs": "29912",
+            "numChars": 3
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "30200",
+        "endTimeMs": "34800",
+        "words": "nothing here is moving but me",
+        "syllables": [
+          {
+            "startTimeMs": "30200",
+            "endTimeMs": "30536",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "30536",
+            "endTimeMs": "30871",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "30871",
+            "endTimeMs": "31207",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "31207",
+            "endTimeMs": "31542",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "31542",
+            "endTimeMs": "31925",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "31925",
+            "endTimeMs": "32308",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "32308",
+            "endTimeMs": "32692",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "32692",
+            "endTimeMs": "33075",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "33075",
+            "endTimeMs": "33459",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "33459",
+            "endTimeMs": "33842",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "33842",
+            "endTimeMs": "34130",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "34130",
+            "endTimeMs": "34417",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "34417",
+            "endTimeMs": "34800",
+            "numChars": 2
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "35200",
+        "endTimeMs": "39248",
+        "words": "the floor is humming like a wire",
+        "syllables": [
+          {
+            "startTimeMs": "35200",
+            "endTimeMs": "35434",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "35434",
+            "endTimeMs": "35667",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "35667",
+            "endTimeMs": "35927",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "35927",
+            "endTimeMs": "36186",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "36186",
+            "endTimeMs": "36446",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "36446",
+            "endTimeMs": "36757",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "36757",
+            "endTimeMs": "37030",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "37030",
+            "endTimeMs": "37302",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "37302",
+            "endTimeMs": "37575",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "37575",
+            "endTimeMs": "37847",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "37847",
+            "endTimeMs": "38159",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "38159",
+            "endTimeMs": "38470",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "38470",
+            "endTimeMs": "38625",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "38625",
+            "endTimeMs": "38937",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "38937",
+            "endTimeMs": "39248",
+            "numChars": 2
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "39600",
+        "endTimeMs": "44016",
+        "words": "i trace the exit signs until they blur",
+        "syllables": [
+          {
+            "startTimeMs": "39600",
+            "endTimeMs": "39742",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "39742",
+            "endTimeMs": "39980",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "39980",
+            "endTimeMs": "40217",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "40217",
+            "endTimeMs": "40455",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "40455",
+            "endTimeMs": "40669",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "40669",
+            "endTimeMs": "40882",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "40882",
+            "endTimeMs": "41167",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "41167",
+            "endTimeMs": "41452",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "41452",
+            "endTimeMs": "41689",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "41689",
+            "endTimeMs": "41927",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "41927",
+            "endTimeMs": "42164",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "42164",
+            "endTimeMs": "42401",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "42401",
+            "endTimeMs": "42639",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "42639",
+            "endTimeMs": "42876",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "42876",
+            "endTimeMs": "43161",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "43161",
+            "endTimeMs": "43446",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "43446",
+            "endTimeMs": "43731",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "43731",
+            "endTimeMs": "44016",
+            "numChars": 2
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "44400",
+        "endTimeMs": "48264",
+        "words": "you said the morning had a price",
+        "syllables": [
+          {
+            "startTimeMs": "44400",
+            "endTimeMs": "44623",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "44623",
+            "endTimeMs": "44846",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "44846",
+            "endTimeMs": "45143",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "45143",
+            "endTimeMs": "45440",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "45440",
+            "endTimeMs": "45663",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "45663",
+            "endTimeMs": "45886",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "45886",
+            "endTimeMs": "46146",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "46146",
+            "endTimeMs": "46406",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "46406",
+            "endTimeMs": "46666",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "46666",
+            "endTimeMs": "46926",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "46926",
+            "endTimeMs": "47149",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "47149",
+            "endTimeMs": "47372",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "47372",
+            "endTimeMs": "47521",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "47521",
+            "endTimeMs": "47769",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "47769",
+            "endTimeMs": "48016",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "48016",
+            "endTimeMs": "48264",
+            "numChars": 1
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "48600",
+        "endTimeMs": "54304",
+        "words": "and i have always been a poor believer",
+        "syllables": [
+          {
+            "startTimeMs": "48600",
+            "endTimeMs": "48876",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "48876",
+            "endTimeMs": "49152",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "49152",
+            "endTimeMs": "49336",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "49336",
+            "endTimeMs": "49704",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "49704",
+            "endTimeMs": "50072",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "50072",
+            "endTimeMs": "50440",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "50440",
+            "endTimeMs": "50808",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "50808",
+            "endTimeMs": "51176",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "51176",
+            "endTimeMs": "51544",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "51544",
+            "endTimeMs": "51912",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "51912",
+            "endTimeMs": "52096",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "52096",
+            "endTimeMs": "52464",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "52464",
+            "endTimeMs": "52832",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "52832",
+            "endTimeMs": "53200",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "53200",
+            "endTimeMs": "53568",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "53568",
+            "endTimeMs": "53936",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "53936",
+            "endTimeMs": "54304",
+            "numChars": 2
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "55400",
+        "endTimeMs": "58528",
+        "words": "neon paralysis",
+        "syllables": [
+          {
+            "startTimeMs": "55400",
+            "endTimeMs": "55881",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "55881",
+            "endTimeMs": "56362",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "56362",
+            "endTimeMs": "57084",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "57084",
+            "endTimeMs": "57806",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "57806",
+            "endTimeMs": "58528",
+            "numChars": 3
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "58800",
+        "endTimeMs": "62296",
+        "words": "hold me in the frequency",
+        "syllables": [
+          {
+            "startTimeMs": "58800",
+            "endTimeMs": "59150",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "59150",
+            "endTimeMs": "59499",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "59499",
+            "endTimeMs": "59849",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "59849",
+            "endTimeMs": "60198",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "60198",
+            "endTimeMs": "60461",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "60461",
+            "endTimeMs": "60723",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "60723",
+            "endTimeMs": "61247",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "61247",
+            "endTimeMs": "61772",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "61772",
+            "endTimeMs": "62296",
+            "numChars": 3
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "62600",
+        "endTimeMs": "65912",
+        "words": "neon paralysis",
+        "syllables": [
+          {
+            "startTimeMs": "62600",
+            "endTimeMs": "63110",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "63110",
+            "endTimeMs": "63619",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "63619",
+            "endTimeMs": "64383",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "64383",
+            "endTimeMs": "65148",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "65148",
+            "endTimeMs": "65912",
+            "numChars": 3
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "66200",
+        "endTimeMs": "71904",
+        "words": "nothing here is moving but me",
+        "syllables": [
+          {
+            "startTimeMs": "66200",
+            "endTimeMs": "66616",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "66616",
+            "endTimeMs": "67032",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "67032",
+            "endTimeMs": "67448",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "67448",
+            "endTimeMs": "67864",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "67864",
+            "endTimeMs": "68339",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "68339",
+            "endTimeMs": "68814",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "68814",
+            "endTimeMs": "69290",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "69290",
+            "endTimeMs": "69765",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "69765",
+            "endTimeMs": "70241",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "70241",
+            "endTimeMs": "70716",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "70716",
+            "endTimeMs": "71073",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "71073",
+            "endTimeMs": "71429",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "71429",
+            "endTimeMs": "71904",
+            "numChars": 2
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "72400",
+        "endTimeMs": "76816",
+        "words": "wait for the drop, wait for the light",
+        "syllables": [
+          {
+            "startTimeMs": "72400",
+            "endTimeMs": "72695",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "72695",
+            "endTimeMs": "72989",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "72989",
+            "endTimeMs": "73210",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "73210",
+            "endTimeMs": "73430",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "73430",
+            "endTimeMs": "73651",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "73651",
+            "endTimeMs": "73872",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "73872",
+            "endTimeMs": "74117",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "74117",
+            "endTimeMs": "74363",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "74363",
+            "endTimeMs": "74608",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "74608",
+            "endTimeMs": "74903",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "74903",
+            "endTimeMs": "75197",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "75197",
+            "endTimeMs": "75418",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "75418",
+            "endTimeMs": "75638",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "75638",
+            "endTimeMs": "75859",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "75859",
+            "endTimeMs": "76080",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "76080",
+            "endTimeMs": "76325",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "76325",
+            "endTimeMs": "76571",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "76571",
+            "endTimeMs": "76816",
+            "numChars": 1
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "77200",
+        "endTimeMs": "81984",
+        "words": "wait for the part where i survive",
+        "syllables": [
+          {
+            "startTimeMs": "77200",
+            "endTimeMs": "77555",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "77555",
+            "endTimeMs": "77909",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "77909",
+            "endTimeMs": "78175",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "78175",
+            "endTimeMs": "78440",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "78440",
+            "endTimeMs": "78706",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "78706",
+            "endTimeMs": "78972",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "78972",
+            "endTimeMs": "79327",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "79327",
+            "endTimeMs": "79681",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "79681",
+            "endTimeMs": "79976",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "79976",
+            "endTimeMs": "80272",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "80272",
+            "endTimeMs": "80567",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "80567",
+            "endTimeMs": "80744",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "80744",
+            "endTimeMs": "81054",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "81054",
+            "endTimeMs": "81364",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "81364",
+            "endTimeMs": "81674",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "81674",
+            "endTimeMs": "81984",
+            "numChars": 1
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "82400",
+        "endTimeMs": "87000",
+        "words": "all of the hours i could not name",
+        "syllables": [
+          {
+            "startTimeMs": "82400",
+            "endTimeMs": "82666",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "82666",
+            "endTimeMs": "82931",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "82931",
+            "endTimeMs": "83285",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "83285",
+            "endTimeMs": "83550",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "83550",
+            "endTimeMs": "83815",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "83815",
+            "endTimeMs": "84110",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "84110",
+            "endTimeMs": "84405",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "84405",
+            "endTimeMs": "84700",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "84700",
+            "endTimeMs": "84877",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "84877",
+            "endTimeMs": "85172",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "85172",
+            "endTimeMs": "85467",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "85467",
+            "endTimeMs": "85762",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "85762",
+            "endTimeMs": "86027",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "86027",
+            "endTimeMs": "86292",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "86292",
+            "endTimeMs": "86646",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "86646",
+            "endTimeMs": "87000",
+            "numChars": 2
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "87400",
+        "endTimeMs": "93288",
+        "words": "burn in the same electric flame",
+        "syllables": [
+          {
+            "startTimeMs": "87400",
+            "endTimeMs": "87853",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "87853",
+            "endTimeMs": "88306",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "88306",
+            "endTimeMs": "88759",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "88759",
+            "endTimeMs": "89099",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "89099",
+            "endTimeMs": "89438",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "89438",
+            "endTimeMs": "89891",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "89891",
+            "endTimeMs": "90344",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "90344",
+            "endTimeMs": "90797",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "90797",
+            "endTimeMs": "91250",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "91250",
+            "endTimeMs": "91703",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "91703",
+            "endTimeMs": "92156",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "92156",
+            "endTimeMs": "92533",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "92533",
+            "endTimeMs": "92911",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "92911",
+            "endTimeMs": "93288",
+            "numChars": 1
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "100200",
+        "endTimeMs": "103512",
+        "words": "neon paralysis",
+        "syllables": [
+          {
+            "startTimeMs": "100200",
+            "endTimeMs": "100710",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "100710",
+            "endTimeMs": "101219",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "101219",
+            "endTimeMs": "101983",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "101983",
+            "endTimeMs": "102748",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "102748",
+            "endTimeMs": "103512",
+            "numChars": 3
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "103800",
+        "endTimeMs": "107112",
+        "words": "hold me in the frequency",
+        "syllables": [
+          {
+            "startTimeMs": "103800",
+            "endTimeMs": "104131",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "104131",
+            "endTimeMs": "104462",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "104462",
+            "endTimeMs": "104794",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "104794",
+            "endTimeMs": "105125",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "105125",
+            "endTimeMs": "105374",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "105374",
+            "endTimeMs": "105622",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "105622",
+            "endTimeMs": "106119",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "106119",
+            "endTimeMs": "106615",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "106615",
+            "endTimeMs": "107112",
+            "numChars": 3
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "107400",
+        "endTimeMs": "110712",
+        "words": "neon paralysis",
+        "syllables": [
+          {
+            "startTimeMs": "107400",
+            "endTimeMs": "107910",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "107910",
+            "endTimeMs": "108419",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "108419",
+            "endTimeMs": "109183",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "109183",
+            "endTimeMs": "109948",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "109948",
+            "endTimeMs": "110712",
+            "numChars": 3
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "111000",
+        "endTimeMs": "117200",
+        "words": "nothing here is moving, nothing here is moving",
+        "syllables": [
+          {
+            "startTimeMs": "111000",
+            "endTimeMs": "111278",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "111278",
+            "endTimeMs": "111557",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "111557",
+            "endTimeMs": "111835",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "111835",
+            "endTimeMs": "112113",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "112113",
+            "endTimeMs": "112431",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "112431",
+            "endTimeMs": "112749",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "112749",
+            "endTimeMs": "113067",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "113067",
+            "endTimeMs": "113345",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "113345",
+            "endTimeMs": "113623",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "113623",
+            "endTimeMs": "113901",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "113901",
+            "endTimeMs": "114179",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "114179",
+            "endTimeMs": "114457",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "114457",
+            "endTimeMs": "114736",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "114736",
+            "endTimeMs": "115014",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "115014",
+            "endTimeMs": "115292",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "115292",
+            "endTimeMs": "115610",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "115610",
+            "endTimeMs": "115928",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "115928",
+            "endTimeMs": "116246",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "116246",
+            "endTimeMs": "116564",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "116564",
+            "endTimeMs": "116882",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "116882",
+            "endTimeMs": "117200",
+            "numChars": 2
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "118000",
+        "endTimeMs": "121312",
+        "words": "neon paralysis",
+        "syllables": [
+          {
+            "startTimeMs": "118000",
+            "endTimeMs": "118510",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "118510",
+            "endTimeMs": "119019",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "119019",
+            "endTimeMs": "119783",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "119783",
+            "endTimeMs": "120548",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "120548",
+            "endTimeMs": "121312",
+            "numChars": 3
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "121600",
+        "endTimeMs": "127488",
+        "words": "and the city keeps on humming",
+        "syllables": [
+          {
+            "startTimeMs": "121600",
+            "endTimeMs": "121968",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "121968",
+            "endTimeMs": "122336",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "122336",
+            "endTimeMs": "122704",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "122704",
+            "endTimeMs": "123072",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "123072",
+            "endTimeMs": "123563",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "123563",
+            "endTimeMs": "124053",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "124053",
+            "endTimeMs": "124462",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "124462",
+            "endTimeMs": "124871",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "124871",
+            "endTimeMs": "125280",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "125280",
+            "endTimeMs": "125771",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "125771",
+            "endTimeMs": "126200",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "126200",
+            "endTimeMs": "126630",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "126630",
+            "endTimeMs": "127059",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "127059",
+            "endTimeMs": "127488",
+            "numChars": 1
+          }
+        ],
+        "alternatives": []
+      }
+    ],
+    "provider": "Musixmatch",
+    "providerLyricsId": "demo-4cOdK2wGLETKBW3PvgPWqT",
+    "providerDisplayName": "Musixmatch",
+    "colors": {
+      "background": -16777216,
+      "text": -1,
+      "highlightText": -16777216
+    },
+    "hasVocalRemoval": false
+  },
+  "colors": {
+    "background": -16777216,
+    "text": -1,
+    "highlightText": -16777216
+  }
+}

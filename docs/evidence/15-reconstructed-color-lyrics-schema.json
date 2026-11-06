@@ -1,0 +1,153 @@
+# Reconstructed color-lyrics v2 payload examples (NOT captured from the live API in this environment)
+#
+# Basis: field names/types observed in the shipped web-player bundle (see 07-color-lyrics-client.txt)
+# plus two public third-party sources (see 14-external-references.md).
+# Every field marked UNVERIFIED is a reconstruction; do not treat it as observed truth.
+#
+## Example A - LINE_SYNCED (line-level timings only)
+## VERIFIED from bundle: syncType, lines[].startTimeMs, lines[].words, colors.{text,highlightText,background} as int32,
+##   provider, providerDisplayName, providerLyricsId, alternatives[].language/lines, previewLines[], capStatus ("CAPPED" compared).
+## UNVERIFIED: lines[].endTimeMs exact semantics (third-party example uses string "0" when unknown), empty syllables arrays,
+##   capStatus values other than "CAPPED" (e.g. "NONE" is a guess), color int values, hasVocalRemoval per-track.
+{
+  "colors": {
+    "background": -14934778,
+    "highlightText": -1,
+    "text": -1
+  },
+  "hasVocalRemoval": false,
+  "lyrics": {
+    "syncType": "LINE_SYNCED",
+    "lines": [
+      {
+        "startTimeMs": "0",
+        "endTimeMs": "0",
+        "words": "",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "960",
+        "endTimeMs": "0",
+        "words": "One, two, three, four",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "4020",
+        "endTimeMs": "0",
+        "words": "Ooh-ooh, ooh-ooh-ooh",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "8120",
+        "endTimeMs": "0",
+        "words": "I don't know why I'm so afraid",
+        "syllables": []
+      }
+    ],
+    "provider": "Musixmatch",
+    "providerDisplayName": "Musixmatch",
+    "providerLyricsId": "32707868",
+    "alternatives": [],
+    "previewLines": [],
+    "capStatus": "NONE"
+  }
+}
+
+## Example B - SYLLABLE_SYNCED (word/syllable timings)
+## VERIFIED from bundle: the string "SYLLABLE_SYNCED" exists and is treated as time-synced; the renderer still only uses
+##   line start times (it never reads syllables -> see notes section (e)).
+## UNVERIFIED, RECONSTRUCTED: lines[].syllables[] objects with {startTimeMs, endTimeMs, numChars}; the meaning is that the
+##   first numChars UTF-16 code units of the line text belong to that syllable and it is sung during [startTimeMs,endTimeMs];
+##   syllables concatenated must equal the line text. lines[].endTimeMs likewise reconstructed. Background-vocal/duet
+##   markers (e.g. isBackground / ttm agents) do NOT appear anywhere in the shipped web-player bundles -> UNVERIFIED and
+##   not included here. Requires a live user-session capture of a syllable-synced track to confirm.
+{
+  "colors": {
+    "background": -15195059,
+    "highlightText": -2039584,
+    "text": -1
+  },
+  "hasVocalRemoval": true,
+  "lyrics": {
+    "syncType": "SYLLABLE_SYNCED",
+    "lines": [
+      {
+        "startTimeMs": "17950",
+        "endTimeMs": "22170",
+        "words": "Hello from the other side",
+        "syllables": [
+          {
+            "startTimeMs": "17950",
+            "endTimeMs": "18620",
+            "numChars": 5
+          },
+          {
+            "startTimeMs": "18620",
+            "endTimeMs": "19100",
+            "numChars": 1
+          },
+          {
+            "startTimeMs": "19100",
+            "endTimeMs": "19720",
+            "numChars": 4
+          },
+          {
+            "startTimeMs": "19720",
+            "endTimeMs": "20400",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "20400",
+            "endTimeMs": "21430",
+            "numChars": 3
+          },
+          {
+            "startTimeMs": "21430",
+            "endTimeMs": "22170",
+            "numChars": 6
+          }
+        ]
+      },
+      {
+        "startTimeMs": "22600",
+        "endTimeMs": "24500",
+        "words": "I must have called a thousand times",
+        "syllables": [
+          {
+            "startTimeMs": "22600",
+            "endTimeMs": "23120",
+            "numChars": 2
+          },
+          {
+            "startTimeMs": "23120",
+            "endTimeMs": "23800",
+            "numChars": 4
+          },
+          {
+            "startTimeMs": "23800",
+            "endTimeMs": "24500",
+            "numChars": 10
+          }
+        ]
+      }
+    ],
+    "provider": "Musixmatch",
+    "providerDisplayName": "Musixmatch",
+    "providerLyricsId": "32707868",
+    "alternatives": [
+      {
+        "language": "es",
+        "lines": [
+          {
+            "startTimeMs": "17950",
+            "endTimeMs": "22170",
+            "words": "Hola desde el otro lado",
+            "syllables": []
+          }
+        ]
+      }
+    ],
+    "previewLines": [],
+    "capStatus": "NONE"
+  }
+}

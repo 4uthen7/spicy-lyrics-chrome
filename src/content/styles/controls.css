@@ -1,0 +1,631 @@
+/*
+ * Spicy Lyrics for Chrome — chrome around the lyrics.
+ *
+ * Header (track meta + sync badge + settings/close), the glass settings panel,
+ * the transient status pill, and the idle (no lyrics / loading) chrome.
+ */
+
+/* ------------------------------------------------------------------------- */
+/* Header                                                                    */
+/* ------------------------------------------------------------------------- */
+
+.sl-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: clamp(18px, 3.1%, 32px) clamp(22px, 3.4%, 42px);
+  pointer-events: auto;
+  transition: opacity 0.38s ease, transform 0.38s var(--sl-ease, ease),
+    visibility 0s linear 0s;
+}
+
+.sl-meta {
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.sl-title {
+  margin: 0;
+  max-width: 46ch;
+  font: 700 clamp(15px, 1.35vw, 18px) / 1.3 var(--sl-font);
+  letter-spacing: -0.012em;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+}
+
+.sl-sub {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 6px 0 0;
+  font: 600 10.5px/1.3 var(--sl-font);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.48);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sl-sub .sl-sep {
+  opacity: 0.45;
+}
+
+.sl-sub .sl-album {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sl-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.sl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.055);
+  backdrop-filter: blur(14px) saturate(1.35);
+  -webkit-backdrop-filter: blur(14px) saturate(1.35);
+  font: 650 9.5px/1 var(--sl-font);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.66);
+  white-space: nowrap;
+}
+
+.sl-badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--sl-accent);
+  box-shadow: 0 0 10px var(--sl-accent-soft);
+  flex: 0 0 auto;
+}
+
+.sl-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(18, 18, 24, 0.36);
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.sl-icon:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.sl-icon:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.sl-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sl-icon:focus-visible,
+.sl-mini:focus-visible,
+.sl-seg button:focus-visible,
+.sl-panel-close:focus-visible {
+  outline: 2px solid var(--sl-accent);
+  outline-offset: 2px;
+}
+
+.sl-panel:focus,
+.sl-panel:focus-visible {
+  outline: none;
+}
+
+/* Header hidden by minimal mode / showHeader=false. */
+.sl-stage.is-chrome-hidden .sl-header {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+}
+
+.sl-stage.is-minimal .sl-header {
+  display: none;
+}
+
+/* Pointer idle: chrome fades out, the page keeps breathing. */
+.sl-stage.is-idle .sl-header {
+  opacity: 0;
+  transform: translateY(-7px);
+  pointer-events: none;
+}
+
+.sl-stage.is-idle {
+  cursor: none;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Status pill                                                               */
+/* ------------------------------------------------------------------------- */
+
+.sl-status {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: clamp(18px, 4.6%, 44px);
+  transform: translate(-50%, 9px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(72%, 580px);
+  padding: 9px 15px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(14, 14, 19, 0.7);
+  backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  font: 550 11.5px/1.3 var(--sl-font);
+  letter-spacing: 0.005em;
+  color: rgba(255, 255, 255, 0.78);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.3s var(--sl-ease, ease);
+}
+
+.sl-status.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.sl-status[hidden] {
+  display: none;
+}
+
+.sl-status-dot {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--sl-accent);
+  box-shadow: 0 0 8px var(--sl-accent-soft);
+}
+
+.sl-status-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Settings panel                                                            */
+/* ------------------------------------------------------------------------- */
+
+.sl-panel {
+  position: absolute;
+  z-index: 7;
+  top: clamp(64px, 8%, 80px);
+  right: clamp(20px, 3%, 38px);
+  display: flex;
+  flex-direction: column;
+  width: 322px;
+  max-height: min(78%, 680px);
+  overflow: hidden;
+  padding: 15px 16px 11px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(16, 16, 21, 0.72);
+  backdrop-filter: blur(30px) saturate(1.45);
+  -webkit-backdrop-filter: blur(30px) saturate(1.45);
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-family: var(--sl-font);
+  opacity: 0;
+  transform: translateY(-7px) scale(0.985);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.24s var(--sl-ease, ease);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.sl-panel.is-open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.sl-panel[hidden] {
+  display: none;
+}
+
+.sl-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+  margin-right: -6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 14px), transparent 100%);
+}
+
+.sl-panel-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sl-panel-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.24);
+  border-radius: 3px;
+}
+
+.sl-panel-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sl-panel-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.sl-panel-title {
+  font: 700 11px/1 var(--sl-font);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.sl-panel-close {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sl-panel-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.sl-panel-close svg {
+  width: 13px;
+  height: 13px;
+}
+
+.sl-group {
+  padding: 10px 0 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.sl-group:first-of-type {
+  border-top: 0;
+  padding-top: 2px;
+}
+
+.sl-group-title {
+  margin-bottom: 9px;
+  font: 700 8.5px/1 var(--sl-font);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.36);
+}
+
+.sl-toggle-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5.5px 0;
+  cursor: pointer;
+}
+
+.sl-toggle-label {
+  font: 500 12.5px/1.3 var(--sl-font);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.sl-toggle-row input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sl-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  transition: background 0.18s ease;
+}
+
+.sl-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transition: transform 0.18s var(--sl-ease, ease);
+}
+
+.sl-toggle-row input:checked + .sl-switch {
+  background: var(--sl-accent);
+}
+
+.sl-toggle-row input:checked + .sl-switch::after {
+  transform: translateX(14px);
+}
+
+.sl-toggle-row input:focus-visible + .sl-switch {
+  outline: 2px solid var(--sl-accent);
+  outline-offset: 2px;
+}
+
+.sl-range-row {
+  display: block;
+  padding: 6px 0;
+}
+
+.sl-range-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.sl-range-label {
+  font: 500 12.5px/1.3 var(--sl-font);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.sl-range-value {
+  font: 600 10.5px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.sl-range-row input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  margin: 0;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+  outline: none;
+  cursor: pointer;
+}
+
+.sl-range-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+
+.sl-range-row input[type="range"]:focus-visible {
+  outline: 2px solid var(--sl-accent);
+  outline-offset: 3px;
+}
+
+.sl-seg-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 5px 0 9px;
+}
+
+.sl-seg {
+  display: flex;
+  padding: 3px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.sl-seg button {
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font: 600 10.5px/1 var(--sl-font);
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sl-seg button.is-on {
+  background: rgba(255, 255, 255, 0.92);
+  color: #101014;
+}
+
+.sl-offset-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 7px 0 3px;
+}
+
+.sl-offset-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.sl-mini {
+  height: 26px;
+  min-width: 44px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  font: 600 10.5px/1 var(--sl-font);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sl-mini:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.sl-offset-value {
+  min-width: 58px;
+  text-align: center;
+  font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.sl-panel-foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.sl-hint {
+  font: 500 9.5px/1.4 var(--sl-font);
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.sl-brand {
+  font: 700 8.5px/1 var(--sl-font);
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.26);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Reduced motion                                                            */
+/* ------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-header,
+  .sl-panel,
+  .sl-status,
+  .sl-icon {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Compact overlay (Spotify's ~340px right sidebar, panel mode)              */
+/* ------------------------------------------------------------------------- */
+
+.sl-stage.is-compact .sl-header {
+  align-items: center;
+  padding: 11px 13px;
+  gap: 8px;
+}
+
+.sl-stage.is-compact .sl-meta {
+  padding-top: 0;
+}
+
+.sl-stage.is-compact .sl-title {
+  max-width: 18ch;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.sl-stage.is-compact .sl-sub {
+  display: none;
+}
+
+.sl-stage.is-compact .sl-actions {
+  gap: 7px;
+}
+
+/* Badge collapses to its accent dot; the source text is title-only. */
+.sl-stage.is-compact .sl-badge {
+  height: 24px;
+  padding: 0 8px;
+}
+
+.sl-stage.is-compact .sl-badge-text {
+  display: none;
+}
+
+.sl-stage.is-compact .sl-badge-dot {
+  width: 6px;
+  height: 6px;
+}
+
+.sl-stage.is-compact .sl-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.sl-stage.is-compact .sl-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sl-stage.is-compact .sl-panel {
+  top: 52px;
+  right: 10px;
+  width: calc(100% - 20px);
+  max-height: calc(100% - 64px);
+}
+
+.sl-stage.is-compact .sl-status {
+  bottom: 16px;
+  max-width: calc(100% - 32px);
+  font-size: 10.5px;
+  padding: 8px 12px;
+}

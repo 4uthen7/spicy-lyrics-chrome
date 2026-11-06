@@ -1,0 +1,39 @@
+# Evidence: NPB title/artist/subtitle components (in main chunk web-player.73b73c08.js)
+# NPB v1 widget renders module 33042 {d} which composes:
+#   module 60296 {n}  -> div > div[data-testid="context-item-info-title"]      (title)
+#   module 42237 {Z}  -> div > div[data-testid="context-item-info-subtitles"]  (subtitle wrapper, PLURAL)
+#   module 86485 {E}  -> per-artist <a data-testid="context-item-info-artist" href="/artist/...">
+#   module 14540 {R}  -> anchor wrapper carrying data-testid="context-item-link"
+#
+# [A] container component (module 33042): title + badges + subtitle + quality
+@3717424 (context 3717424..3718224):
+33042(e,t,r){"use strict";var i=r(11543),n=r(66517),a=r.n(n),s=r(51602),o=r(77050),l=r(1394),u=r(42237),c=r(60296),d=r(7186),p=r(55899);r.d(t,{},{d:({context:e,item:t,referrer:r,className:n,titleTypeVariant:h,subtitleTypeVariant:f,subtitleSemanticColor:m,onTitleClick:g,onSubtitleClick:v,enableVideoButton:y=!1,size:b="small",subtitleSignifier:E=!1})=>(0,i.jsxs)("div",{className:a()(n,p.A.container),children:[r!==d.G.NPV&&(0,i.jsx)(o.e,{item:t}),(0,i.jsx)(c.n,{context:e,item:t,onClick:(e,t)=>g?.(t),typeVariant:h,isNowPlayingView:r===d.G.NPV}),(0,i.jsx)(s.l,{referrer:r,className:p.A.badges,item:t,enableVideoButton:y,variant:f,size:b}),(0,i.jsx)(u.Z,{item:t,onClick:(e,t)=>v?.(t),typeVariant:f,semanticColor:m,referrer:r,showSignifier:E}),!E&&(0,i.jsx)(l.C,{item:t,typeVariant:f,referrer:r})]})})},55899(e,t,r
+
+# [B] title component (module 60296)
+@3724129 (context 3724129..3725379):
+60296(e,t,r){"use strict";var i=r(11543),n=r(104),a=r(21439),s=r(33825),o=r(11150),l=r(81928),u=r(10971),c=r(15029),d=r(98615),p=r(57591),h=r(67333),f=r(2581),m=r(95071),g=r(63067),v=r(51051),y=r(93067),b=r(97365),E=r(55899);r.d(t,{},{n:({context:e,item:t,onClick:r,typeVariant:T="bodySmall"})=>{let _=null,S=(0,p.N)(t)?s.Q.getAdTitle(t)??t.name:t.name;return(0,f.p)(t)||(0,g.V)(t)?_=(0,i.jsx)(u.M,{onClick:r,item:t,context:e}):(0,v.v)(t)||(0,m.r)(t)?_=(0,i.jsx)(c.k,{onClick:r,item:t,context:e}):(0,h.d)(t)?_=(0,i.jsx)(l.k,{onClick:r,item:t,context:e}):(0,p.N)(t)?_=(0,i.jsx)(a.A,{item:t,surface:"NPB",variant:"bodySmall"}):(0,y.v)(t)?_=(0,i.jsx)(d.A,{onClick:r,item:t,context:e}):(0,b.d)(t),(0,i.jsx)("div",{className:E.A.title,children:(0,i.jsx)(o.r,{title:S,children:(0,i.jsx)(n.E,{"data-testid":"context-item-info-title",as:"div",variant:T,className:E.A.text,dir:"auto",children:_})},t.uri)})}})},10971(e,t,r){"use strict";var i=r(11543),n=r(14540),a=r(10728),s=r(58761),o=r(71733),l=r(53182);r.d(t,{},{M:({item:e,context:t,onClick:r})=>{let{draggable:u,onDragStart:c}=(0,l.P)({itemUris:[e.uri],dragLabelText:(0,o.r)(e)});return(0,i.jsx)(a.h,{menu:(0,i.jsx)(s.W,{context:t,item:e}),children:(0,i.jsx)("span",{draggable:u,onDragStart:c,children:(0,i.jsx)(n.R,
+
+# [C] subtitle wrapper (module 42237): data-testid="context-item-info-subtitles"
+@3720937 (context 3720937..3722437):
+42237(e,t,r){"use strict";var i=r(11543),n=r(104),a=r(78729),s=r(33825),o=r(11150),l=r(98292),u=r(49089),c=r(98019),d=r(96075),p=r(86485),h=r(15355),f=r(7186),m=r(57591),g=r(67333),v=r(2581),y=r(95071),b=r(63067),E=r(51051),T=r(93067),_=r(97365),S=r(55899);r.d(t,{},{Z:({item:e,referrer:t,onClick:r,typeVariant:A="marginal",semanticColor:I="textSubdued",showSignifier:C=!1})=>{let R=null,O=(0,m.N)(e)?s.Q.getAdSubtitle():e.name,N=(0,l.d)();if((0,E.v)(e))R=(0,i.jsx)(p.E,{item:e,onClick:r});else if((0,y.r)(e))R=(0,i.jsx)(u.Y,{item:e,onClick:r});else if((0,v.p)(e)||(0,b.V)(e))R=(0,i.jsx)(d.Q,{item:e,onClick:r});else if((0,g.d)(e))R=(0,i.jsx)(c.W,{item:e,onClick:r});else if((0,m.N)(e)){if(t===f.G.NPV)return null;R=(0,i.jsx)(a.A,{item:e,surface:"NPB",variant:"marginal"})}else(0,T.v)(e)?R=(0,i.jsx)(h.O,{item:e,onClick:r}):(0,_.d)(e);return(0,i.jsxs)("div",{className:S.A.subtitle,children:[(0,i.jsx)(o.r,{title:O,children:(0,i.jsx)(n.E,{"data-testid":"context-item-info-subtitles",as:"div",variant:A,className:S.A.subtitle,semanticColor:I,children:R})},e.uri),C&&N&&(0,i.jsx)("div",{className:S.A.subtitleSignifier,children:(0,i.jsx)(n.E,{variant:"bodyMedium",semanticColor:I,children:N})})]})}})},96075(e,t,r){"use strict";var i=r(11543),n=r(22092),a=r(74494),s=r(10728),o=r(66996),l=r(53182);r.d(t,{},{Q:({item:e,onClick:t})=>{let{show:r}=e,u=(0,n.o_h)(r.uri)?.toURLPath(!0),{draggable:c,onDragStart:d}=(0,l.P)({itemUris:[r.uri],dragLabelText:r.name});return u?(0,i.jsx)(s.h,{menu:(0,i.jsx)(o.H,{uri:r.uri}),c
+
+# [D] artist links (module 86485): <a data-testid="context-item-info-artist" href=/artist/{id}>
+@3722600 (context 3722600..3723400):
+86485(e,t,r){"use strict";var i=r(11543),n=r(22092),a=r(76687),s=r(10728),o=r(87192),l=r(42592),u=r(53182);r.d(t,{},{E:({item:e,onClick:t})=>{let{draggable:r,onDragStart:c}=(0,u.P)();return(0,i.jsx)(i.Fragment,{children:e.artists.map((u,d)=>{let p=e.isLocal?void 0:(0,n.o_h)(u.uri)?.toURLPath(!0);return(0,i.jsxs)("span",{children:[d>0?a.Ru.getSeparator():null,p?(0,i.jsx)(s.h,{menu:(0,i.jsx)(o.t,{uri:u.uri}),children:(0,i.jsx)(l.N,{to:p,"data-testid":"context-item-info-artist",dir:"auto",draggable:r,onDragStart:e=>{c(e,{itemUris:[u.uri],dragLabelText:u.name})},onClick:t,children:u.name})}):(0,i.jsx)("span",{dir:"auto",children:u.name})]},d)})})}})},15355(e,t,r){"use strict";var i=r(11543),n=r(22092),a=r(76687),s=r(10728),o=r(87192),l=r(42592),u=r(53182);r.d(t,{},{O:({item:e,onClick:t})=>{let{draggable:r,
+
+# [E] title anchor (module 14540): data-testid="context-item-link"; for a TRACK the href is the ALBUM path
+#     (anchor href = e.album.uri -> /album/{albumId}), NOT /track/{trackId}. Consequence for the extension:
+#     the collapsed player bar does not expose the track id in an href. See notes section (b)/(f).
+@3093338 (context 3093338..3094488):
+14540(e,t,r){"use strict";var i=r(11543),n=r(22092),a=r(42592),s=r(96496),o=r(57591),l=r(67333),u=r(2581),c=r(95071),d=r(63067),p=r(51051),h=r(93067),f=r(97365);r.d(t,{},{R:({item:e,children:t,onClick:r,adUrl:m})=>{let{isSongVideoPlayingVideo:g}=(0,s.k)(),v=m??function(e,{isVideoPlaying:t=!1}){if((0,p.v)(e)||(0,c.r)(e)){let r=t?e.artists[0]?.uri:e.album.uri;return(0,n.o_h)(r)?.toURLPath(!0)}if((0,u.p)(e)||(0,d.V)(e)||(0,l.d)(e)||(0,h.v)(e))return(0,n.o_h)(e?.uri)?.toURLPath(!0);(0,o.N)(e)||(0,f.k)(e)}(e,{isVideoPlaying:g});return(0,p.v)(e)&&e.isLocal?(0,i.jsx)(i.Fragment,{children:t}):(0,p.v)(e)||(0,c.r)(e)||(0,u.p)(e)||(0,d.V)(e)||(0,l.d)(e)||(0,h.v)(e)?void 0===v?(0,i.jsx)(i.Fragment,{children:t}):(0,i.jsx)(a.N,{"data-testid":"context-item-link",to:v,onClick:r,children:t}):(0,o.N)(e)?v?(0,i.jsx)("a",{"data-testid":"context-item-info-ad-title",onClick:e=>{r?.(e,v)},href:v,rel:"noopener noreferrer",target:"_blank",children:t}):(0,i.jsx)(i.Fragment,{children:t}):(0,f.d)(e)}})},35002(e,t,r){"use strict";var i=r(11543),n=r(31256);r.d(t,{},{b:({children:e,...t})=>(0,i.jsx)(n.t,{...t,action:"toggle",trigger:"click",children:e})})},31256(e,t,r){"use s
+
+# [F] item-type predicates used by the href logic (so [E] can be read exactly):
+#   51051 {v} = type === TRACK (r(51051) is bound to variable p inside module 14540)
+#   2581  {p} = EPISODE, 95071 {r} = KALLAX, 57591 {N} = AD, 67333 {d} = CHAPTER,
+#   63067 {V} = PODCAST_CHAPTER, 93067 {v} = UNKNOWN
+# Predicate definitions (verbatim, main chunk):
+@5739884: 51051(e,t,r){...e?.type===i.c.TRACK...}
+@5739373: 57591(e,t,r){...e?.type===i.c.AD...}
+# => in module 14540 the first branch (p.v || c.r) is (TRACK || KALLAX) and returns
+#    href(e.album.uri) for a track (href(e.artists[0].uri) while a song video is playing).
+#    Therefore a[data-testid="context-item-link"] href for a normal track is /album/<albumId>.

@@ -1,0 +1,32 @@
+{
+  "colors": {
+    "background": "#0b0b0f",
+    "text": "#f2f2f2",
+    "highlightText": "#9d7bff"
+  },
+  "lyrics": {
+    "syncType": "LINE_SYNCED",
+    "provider": "Musixmatch",
+    "language": "en",
+    "lines": [
+      {
+        "startTimeMs": "5000",
+        "endTimeMs": "9000",
+        "words": "first sung line",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "16000",
+        "endTimeMs": "20000",
+        "words": "second sung line",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "21000",
+        "endTimeMs": "24000",
+        "words": "third sung line",
+        "syllables": []
+      }
+    ]
+  }
+}

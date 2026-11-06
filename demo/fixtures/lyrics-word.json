@@ -1,0 +1,42 @@
+{
+  "colors": {
+    "background": "#08080b",
+    "text": "#ffffff",
+    "highlightText": "#7dffb3"
+  },
+  "lyrics": {
+    "syncType": "LINE_SYNCED",
+    "provider": "Musixmatch",
+    "providerDisplayName": "Musixmatch",
+    "language": "en",
+    "lines": [
+      {
+        "startTimeMs": "1000",
+        "endTimeMs": "3400",
+        "words": "Never gonna give you up",
+        "syllables": [
+          { "startTimeMs": "1000", "endTimeMs": "1300", "numChars": 6 },
+          { "startTimeMs": "1300", "endTimeMs": "1600", "numChars": 5 },
+          { "startTimeMs": "1600", "endTimeMs": "1650", "numChars": 1 },
+          { "startTimeMs": "1650", "endTimeMs": "2000", "numChars": 4 },
+          { "startTimeMs": "2000", "endTimeMs": "2050", "numChars": 1 },
+          { "startTimeMs": "2050", "endTimeMs": "2500", "numChars": 3 },
+          { "startTimeMs": "2500", "endTimeMs": "2550", "numChars": 1 },
+          { "startTimeMs": "2550", "endTimeMs": "2800", "numChars": 2 }
+        ]
+      },
+      {
+        "startTimeMs": "3500",
+        "endTimeMs": "6000",
+        "words": "so happy now",
+        "syllables": [
+          { "startTimeMs": "3500", "endTimeMs": "3700", "numChars": 3 },
+          { "startTimeMs": "3700", "endTimeMs": "4000", "numChars": 3 },
+          { "startTimeMs": "4000", "endTimeMs": "4300", "numChars": 2 },
+          { "startTimeMs": "4300", "endTimeMs": "4350", "numChars": 1 },
+          { "startTimeMs": "4350", "endTimeMs": "5000", "numChars": 3 }
+        ]
+      }
+    ]
+  }
+}

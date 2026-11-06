@@ -1,0 +1,41 @@
+# Evidence: session/token endpoints observed in a real browser, plus token JSON shape
+#
+# Network requests seen during a logged-out load of https://open.spotify.com/ (CDP Network domain):
+#   GET  https://open.spotify.com/                                 200 Document
+#   GET  https://open.spotify.com/api/server-time                  200 application/json ({"serverTime":1793937815} style body, 25 bytes)
+#   GET  https://open.spotify.com/api/token?reason=transport&productType=web-player&totp=<6d>&totpServer=<6d>&totpVer=61   200
+#   GET  https://open.spotify.com/api/token?reason=init&productType=web-player&totp=<6d>&totpServer=<6d>&totpVer=61        200
+#   POST https://clienttoken.spotify.com/v1/clienttoken            200 (granted_token for the client-token header)
+#   POST https://open.spotify.com/remote-config-resolver/v3/unauth/configuration 200
+#   GET  https://open.spotify.com/cdn/build/web-player/<chunks>    200 (lazy chunks incl. dwp-now-playing-bar)
+#
+# => current build uses /api/token (TOTP-protected), NOT /get_access_token.
+#    /get_access_token?reason=transport&productType=web_player returned HTTP 403 "URL Blocked" (Varnish 54113)
+#    both from curl and from a same-origin browser fetch in this anonymous session.
+#
+# Request headers of the /api/token call (browser, redacted):
+#   Referer: https://open.spotify.com/intl-ja/  |  User-Agent: ...Chrome/157...  |  sec-ch-ua-* ...
+#
+# Response JSON of /api/token (anonymous session; accessToken/_notes redacted):
+{
+ "clientId": "d8a5ed958d274c2e8ee717e6a4b0971d",
+ "accessToken": "<redacted 140 chars>",
+ "accessTokenExpirationTimestampMs": 1793940368169,
+ "isAnonymous": true,
+ "_notes": "<present>"
+}
+
+# clienttoken.spotify.com/v1/clienttoken response shape:
+{
+ "response_type": "RESPONSE_GRANTED_TOKEN_RESPONSE",
+ "granted_token_keys": [
+  "token",
+  "expires_after_seconds",
+  "refresh_after_seconds",
+  "domains"
+ ],
+ "token_len": 368,
+ "token_prefix": "AAHTe0VwfIB2..."
+}
+
+# Third-party corroboration (syrics, public GitHub) uses the same token URL and header set; see 14-external-references.md.

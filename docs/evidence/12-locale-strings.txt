@@ -1,0 +1,22 @@
+# Evidence: en locale strings (https://open.spotifycdn.com/cdn/generated-locales/web-player/en.d77c2d39.json, 200, 47552 bytes gzip transfer)
+#
+playback-control.play = "Play"
+playback-control.pause = "Pause"
+playback-control.a11y.seek-slider-button = "Change progress"
+playback-control.now-playing-label = "Now playing: {0} by {1}"
+web-player.now-playing-view.label = "Now playing view"
+web-player.lyrics.sync-button.title = "Sync"
+web-player.lyrics.noLyrics0 = "Hmm. We don't know the lyrics for this one."
+web-player.lyrics.error = "Couldn't load the lyrics for this song. Try again later."
+web-player.lyrics.provider = undefined
+web-player.lyrics.providerLyricsId = undefined
+lyrics.syncType = undefined
+
+# keys that are NOT present verbatim (naming uses web-player.* prefixes; grep needed):
+  absent: web-player.lyrics.provider
+  absent: web-player.lyrics.providerLyricsId
+  absent: lyrics.syncType
+
+# Live ja-JP DOM labels observed (same build, browser locale ja):
+  control-button-playpause aria-label = "一時停止" (pause) ; player-controls aria-label = "プレーヤーコントロール" ;
+  sidebar login bar etc are localized too. Hence never match English aria-label literals.

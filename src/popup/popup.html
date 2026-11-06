@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Spicy Lyrics</title>
+<link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <img class="logo" src="../../assets/icons/icon-48.png" alt="" />
+    <div class="head-text">
+      <div class="name">Spicy Lyrics</div>
+      <div class="tag">Spotify web player · word-by-word</div>
+    </div>
+    <label class="switch master" title="Enable the overlay">
+      <input type="checkbox" id="enabled" />
+      <span class="slider"></span>
+    </label>
+  </header>
+
+  <section class="status" id="status-card">
+    <div class="status-row">
+      <div class="status-main">
+        <div class="status-title" id="status-title">Not on Spotify</div>
+        <div class="status-sub" id="status-sub">Open open.spotify.com and play a song.</div>
+      </div>
+      <span class="pill" id="status-pill">idle</span>
+    </div>
+    <div class="status-actions">
+      <button class="primary" id="toggle-overlay" type="button">Toggle overlay</button>
+      <button class="ghost" id="clear-cache" type="button">Clear cache</button>
+    </div>
+  </section>
+
+  <section class="group">
+    <div class="group-title">Layout</div>
+    <div class="row">
+      <label for="mode">Mode</label>
+      <select id="mode">
+        <option value="cinema">Cinema (full page)</option>
+        <option value="panel">Panel (right sidebar)</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="wordHighlight">Word fill</label>
+      <select id="wordHighlight">
+        <option value="gradient">Gradient wip</option>
+        <option value="solid">Solid</option>
+      </select>
+    </div>
+    <div class="row toggle-row">
+      <label for="minimalMode">Minimal mode</label>
+      <label class="switch"><input type="checkbox" id="minimalMode" /><span class="slider"></span></label>
+    </div>
+    <div class="row toggle-row">
+      <label for="showHeader">Show header</label>
+      <label class="switch"><input type="checkbox" id="showHeader" /><span class="slider"></span></label>
+    </div>
+    <div class="row toggle-row">
+      <label for="showInterludeDots">Interlude dots</label>
+      <label class="switch"><input type="checkbox" id="showInterludeDots" /><span class="slider"></span></label>
+    </div>
+  </section>
+
+  <section class="group">
+    <div class="group-title">Behaviour</div>
+    <div class="row toggle-row">
+      <label for="autoOpen">Auto-open on Spotify lyrics</label>
+      <label class="switch"><input type="checkbox" id="autoOpen" /><span class="slider"></span></label>
+    </div>
+    <div class="row toggle-row">
+      <label for="autoFetch">Read Spotify lyrics automatically</label>
+      <label class="switch"><input type="checkbox" id="autoFetch" /><span class="slider"></span></label>
+    </div>
+    <div class="row toggle-row">
+      <label for="reduceMotion">Reduce motion</label>
+      <label class="switch"><input type="checkbox" id="reduceMotion" /><span class="slider"></span></label>
+    </div>
+    <div class="row">
+      <label for="offsetMs">Offset</label>
+      <div class="slider-box">
+        <input type="range" id="offsetMs" min="-2000" max="2000" step="50" />
+        <output id="offsetMs-out">0 ms</output>
+      </div>
+    </div>
+  </section>
+
+  <section class="group">
+    <div class="group-title">Lyrics source</div>
+    <div class="row">
+      <label for="import-ttml">Local TTML</label>
+      <button class="ghost small" id="import-ttml" type="button">Import…</button>
+      <input type="file" id="ttml-file" accept=".ttml,.xml,text/xml,application/xml" hidden />
+    </div>
+    <div class="row">
+      <label>Now using</label>
+      <span class="source" id="source-label">—</span>
+    </div>
+  </section>
+
+  <section class="group">
+    <div class="group-title">Appearance</div>
+    <div class="row toggle-row">
+      <label for="showBackground">Dynamic background</label>
+      <label class="switch"><input type="checkbox" id="showBackground" /><span class="slider"></span></label>
+    </div>
+    <div class="row">
+      <label for="fontSize">Text size</label>
+      <div class="slider-box">
+        <input type="range" id="fontSize" min="0.7" max="1.5" step="0.05" />
+        <output id="fontSize-out">1.00x</output>
+      </div>
+    </div>
+    <div class="row">
+      <label for="lineGap">Line spacing</label>
+      <div class="slider-box">
+        <input type="range" id="lineGap" min="0.7" max="1.6" step="0.05" />
+        <output id="lineGap-out">1.00x</output>
+      </div>
+    </div>
+    <div class="row">
+      <label for="backgroundBlur">Background blur</label>
+      <div class="slider-box">
+        <input type="range" id="backgroundBlur" min="0" max="180" step="2" />
+        <output id="backgroundBlur-out">90px</output>
+      </div>
+    </div>
+    <div class="row">
+      <label for="backgroundDim">Background dim</label>
+      <div class="slider-box">
+        <input type="range" id="backgroundDim" min="0" max="0.9" step="0.02" />
+        <output id="backgroundDim-out">0.62</output>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Alt+Shift+L toggles the overlay</span>
+    <button class="link" id="reset" type="button">Reset</button>
+  </footer>
+</div>
+<script src="../shared/contract.js"></script>
+<script src="../shared/store.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

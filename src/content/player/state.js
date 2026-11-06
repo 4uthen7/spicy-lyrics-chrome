@@ -1,0 +1,925 @@
+/**
+ * Spotify web player observer.
+ *
+ * The content script cannot read Spotify's internal player state, so this module
+ * polls and observes the player bar DOM and re-bases `SL.store`:
+ *
+ *   - track identity/title/artist/album/cover from the now-playing widget
+ *   - duration + position from the progress bar / time labels
+ *   - play state from the play/pause button label, with a position-delta
+ *     fallback for localised or unfamiliar labels
+ *   - native lyrics panel open/closed for the acquisition fallback
+ *
+ * A 250 ms interval is the backbone; a MutationObserver only schedules an extra
+ * poll (throttled) so control interactions feel instant. Everything is looked
+ * up through SELECTORS on every poll, so a re-rendered player bar is picked up
+ * automatically and a recon-found selector fix is a one-line change.
+ *
+ * Selectors reflect the recon evidence in docs/evidence/04-live-dom.txt and
+ * 03-testid-inventory.txt (shipped build, logged-out player bar):
+ *   - position/duration come from the HIDDEN range input inside
+ *     div[data-testid="playback-progressbar"]; value/max are milliseconds and
+ *     max is only meaningful once a track is loaded;
+ *   - the visual progress is div[data-testid="progress-bar"] with a
+ *     `--progress-bar-transform: NN%` inline style;
+ *   - play/pause labels are localised, so the SVG glyph is used as a fallback;
+ *   - the collapsed player bar does not expose the track id in an href
+ *     (context-item-link points at the ALBUM for tracks), so ids are resolved
+ *     from an internal track link or the track page when the titles match; the
+ *     lyrics resolver can also adopt an id from a sniffed color-lyrics URL.
+ *
+ * UNVERIFIED: exact behaviour of real Spotify's seek handlers (the demo shape is
+ * verified), and whether the page-URL track-id heuristic survives every layout.
+ */
+(function () {
+  'use strict';
+  const SL = (globalThis.SL = globalThis.SL || {});
+  if (SL.player) return;
+  const util = SL.util;
+  const store = SL.store;
+
+  const POLL_MS = 250;
+  const MUTATION_THROTTLE_MS = 150;
+  const SEEK_JITTER_MS = 350;
+  
+  /**
+   * Adjustable selector table: ordered candidates, most specific first. Every
+   * Spotify-specific string in this module lives here, so a recon fix is a
+   * one-line change.
+   */
+  const SELECTORS = {
+    playerBar: [
+      '[data-testid="now-playing-bar"]',
+      '[data-testid="player-bar"]',
+      'footer[data-testid="now-playing-bar"]',
+    ],
+    nowPlaying: [
+      '[data-testid="now-playing-widget"]',
+      '[data-testid="now-playing-widget-v2"]',
+      '[data-testid="nowplaying-bar"]',
+    ],
+    /** Hrefs that carry a real /track/<id> (the player bar itself may not). */
+    trackLink: [
+      '[data-testid="now-playing-widget"] a[href*="/track/"]',
+      '[data-testid="now-playing-widget-v2"] a[href*="/track/"]',
+      '[data-testid="context-item-link"][href*="/track/"]',
+      '[data-testid="nowplaying-track-link"]',
+      'footer a[href*="/track/"]',
+    ],
+    trackLinkInternal: [
+      '[data-testid="now-playing-bar"] [data-testid="internal-track-link"][href*="/track/"]',
+      '[data-testid="now-playing-widget"] [data-testid="internal-track-link"][href*="/track/"]',
+      '[data-testid="now-playing-widget-v2"] [data-testid="internal-track-link"][href*="/track/"]',
+    ],
+    title: [
+      '[data-testid="context-item-info-title"] a',
+      '[data-testid="context-item-info-title"]',
+      '[data-testid="context-item-link"]',
+      '[data-testid="nowplaying-track-link"]',
+    ],
+    subtitleLinks: [
+      '[data-testid="context-item-info-subtitles"] a',
+      '[data-testid="context-item-info-artist"]',
+      '[data-testid="context-item-info-album"]',
+      '[data-testid="context-item-info-subtitles"]',
+    ],
+    cover: [
+      '[data-testid="cover-art-button"] img',
+      '[data-testid="cover-art-container"] img',
+      '[data-testid="cover-art-image"] img',
+      'img[data-testid="cover-art-image"]',
+      '[data-testid="cover-art-image"]',
+      '[data-testid="CoverSlotCollapsed__container"] img',
+      '[data-testid="now-playing-widget"] img',
+      '[data-testid="now-playing-widget-v2"] img',
+      '[data-testid="now-playing-bar"] img',
+    ],
+    playPause: [
+      '[data-testid="control-button-playpause"]',
+      'button[data-testid="control-button-playpause"]',
+      'button[aria-label="Play"]',
+      'button[aria-label="Pause"]',
+    ],
+    /** Current build: wrapper contains the hidden range input + visual bar. */
+    playbackProgressbar: [
+      '[data-testid="playback-progressbar"]',
+    ],
+    /** Primary position/duration source on the current build (ms value/max). */
+    rangeInput: [
+      '[data-testid="playback-progressbar"] input[type="range"]',
+      '[data-testid="now-playing-bar"] input[type="range"][max]',
+    ],
+    /** Visual progress bar; carries --progress-bar-transform: NN%. */
+    progressBar: [
+      '[data-testid="playback-progressbar"] [data-testid="progress-bar"]',
+      '[data-testid="progress-bar"]',
+      '[data-testid="playback-progressbar"]',
+      '[data-testid="playback-bar"] [role="slider"]',
+      '[data-testid="now-playing-bar"] [role="slider"][aria-valuenow]',
+    ],
+    /** Older builds / demo harness: div[role=slider] with aria-valuenow. */
+    progressSlider: [
+      '[data-testid="progress-bar"][role="slider"]',
+      '[data-testid="progress-bar"] [role="slider"]',
+      '[role="slider"][aria-valuenow]',
+      '[data-testid="progress-bar"]',
+    ],
+    positionText: [
+      '[data-testid="playback-position"]',
+      '[data-testid="playback-progressbar"] [data-testid="playback-position"]',
+    ],
+    durationText: [
+      '[data-testid="playback-duration"]',
+      '[data-testid="playback-progressbar"] [data-testid="playback-duration"]',
+    ],
+    lyricsButton: [
+      '[data-testid="lyrics-button"]',
+      'button[aria-label*="lyric" i]',
+    ],
+    /** Any match means the native lyrics view is on screen. */
+    nativeLyrics: [
+      '[data-testid="lyrics-line"]',
+      '[data-testid="read-along-scroll-container"]',
+      '[data-testid="fullscreen-lyric"]',
+      '[data-testid="lyrics-container"]',
+      '[data-testid="fullscreen-lyrics"]',
+      '[data-testid="lyrics-page"]',
+      '[data-testid="lyrics-button"][aria-pressed="true"]',
+      'button[data-testid="lyrics-button"][aria-pressed="true"]',
+    ],
+  };
+
+  const PAUSE_LABELS = /pause|pausa|pausar|pausieren|sospendi|pauzeren|wstrzymaj|пауза|一時停止|일시정지|暫停|暂停|duraklat|pauze|pausa|pauss/i;
+  const PLAY_LABELS = /play|reproducir|lecture|wiedergabe|riproduci|afspelen|odtwórz|воспроизвести|再生|재생|播放|تشغيل|spela|toista|spil|afspil/i;
+
+  let started = false;
+  let pollTimer = 0;
+  let mutationTimer = 0;
+  let observer = null;
+  let lastTrackSignature = '';
+  let lastRawPosition = null;
+  let lastAdvanceAt = 0;
+  let lastPlaying = false;
+  let lastNativeOpen = null;
+  let seekSeqSeen = 0;
+
+  function scopeOf(root) {
+    return root && typeof root.querySelectorAll === 'function' ? root : typeof document !== 'undefined' ? document : null;
+  }
+
+  function pick(selectors, root) {
+    const scope = scopeOf(root);
+    if (!scope) return null;
+    for (const selector of selectors) {
+      try {
+        const element = scope.querySelector(selector);
+        if (element) return element;
+      } catch {
+        /* invalid selector candidate: ignore */
+      }
+    }
+    return null;
+  }
+
+  function pickAll(selectors, root) {
+    const scope = scopeOf(root);
+    if (!scope) return [];
+    const seen = new Set();
+    const out = [];
+    for (const selector of selectors) {
+      try {
+        const list = scope.querySelectorAll(selector);
+        for (const element of Array.from(list)) {
+          if (!seen.has(element)) {
+            seen.add(element);
+            out.push(element);
+          }
+        }
+      } catch {
+        /* invalid selector candidate: ignore */
+      }
+    }
+    return out;
+  }
+
+  function parseClock(value) {
+    try {
+      return util.parseClock(value);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * The current build renders a visually-hidden range input inside the seek
+   * bar; value/max are milliseconds (UNVERIFIED for a playing track, but the
+   * live idle DOM and the SeekBar bundle both use ms).
+   */
+  function readRangeInput(scope) {
+    const input = pick(SELECTORS.rangeInput, scope);
+    if (!input) return null;
+    const attr = (name) => {
+      try {
+        return input.getAttribute ? input.getAttribute(name) : null;
+      } catch {
+        return null;
+      }
+    };
+    const max = Number(attr('max'));
+    let value = Number(attr('value'));
+    try {
+      if (input.type === 'range' && input.value !== '') value = Number(input.value);
+    } catch {
+      /* ignore */
+    }
+    return {
+      input,
+      max: isFinite(max) ? max : null,
+      value: isFinite(value) ? value : null,
+      ariaValueText: attr('aria-valuetext') || '',
+    };
+  }
+
+  /** Parses "1:23/3:40" and "-:--/-:--" style aria-valuetext. */
+  function parseAriaValueText(valueText) {
+    if (!valueText) return null;
+    const match = /^\s*([^/]*?)\s*\/\s*([^/]*?)\s*$/.exec(valueText);
+    if (!match) return null;
+    const positionMs = parseClock(match[1]);
+    const durationMs = parseClock(match[2]);
+    if (positionMs == null && durationMs == null) return null;
+    return { positionMs, durationMs };
+  }
+
+  /** Visual seek-bar percentage from --progress-bar-transform: NN%. */
+  function readTransformPercent() {
+    const bar = pick(SELECTORS.progressBar);
+    if (!bar) return null;
+    const style = (bar.getAttribute && bar.getAttribute('style')) || '';
+    const match = /--progress-bar-transform\s*:\s*(-?\d+(?:\.\d+)?)%/.exec(style);
+    if (!match) return null;
+    const percent = Number(match[1]);
+    return isFinite(percent) ? util.clamp(percent, 0, 100) / 100 : null;
+  }
+
+  /** Duration: range max (authoritative when > 0) -> duration text -> slider. */
+  function readDurationMs(scope) {
+    const range = readRangeInput(scope);
+    if (range && range.max > 0) return Math.round(range.max);
+
+    const durationElement = pick(SELECTORS.durationText, scope);
+    const textDuration = durationElement ? parseClock(durationElement.textContent) : null;
+    if (textDuration && textDuration > 0) return textDuration;
+
+    const slider = pick(SELECTORS.progressSlider, scope);
+    if (slider) {
+      const rawMax = Number(slider.getAttribute && slider.getAttribute('aria-valuemax'));
+      if (isFinite(rawMax) && rawMax > 0) {
+        const state = store.get();
+        const known = state.track && state.track.durationMs;
+        if (known > 0) {
+          if (Math.abs(rawMax - known) <= Math.max(2, known * 0.15)) return Math.round(rawMax);
+          if (Math.abs(rawMax - known / 1000) <= Math.max(2, (known / 1000) * 0.15)) return Math.round(rawMax * 1000);
+        }
+        return rawMax > 3600 ? Math.round(rawMax) : Math.round(rawMax * 1000);
+      }
+    }
+    return 0;
+  }
+
+  /** Largest candidate from an <img srcset>, else currentSrc/src. */
+  function readCoverUrl(widget) {
+    let image = pick(SELECTORS.cover, widget) || pick(SELECTORS.cover);
+    if (!image && widget && widget !== document && typeof widget.querySelector === 'function') {
+      // This build has no cover-art-image testid; the cover is a plain <img>
+      // inside the cover-art button / now-playing widget.
+      try {
+        image = widget.querySelector('img');
+      } catch {
+        image = null;
+      }
+    }
+    if (!image) return '';
+    let best = '';
+    let bestWidth = -1;
+    const candidates = [image];
+    try {
+      if (typeof image.querySelectorAll === 'function') candidates.push(...Array.from(image.querySelectorAll('img')));
+    } catch {
+      /* ignore */
+    }
+    for (const candidate of candidates) {
+      const srcset = candidate.getAttribute && candidate.getAttribute('srcset');
+      if (srcset) {
+        for (const part of srcset.split(',')) {
+          const widthMatch = /^\s*(\S+)\s+(\d+)(?:w|W)\s*$/.exec(part);
+          const densityMatch = /^\s*(\S+)\s+(\d+(?:\.\d+)?)x\s*$/.exec(part);
+          const bareMatch = /^\s*(\S+)\s*$/.exec(part);
+          let score = -1;
+          let url = '';
+          if (widthMatch) {
+            url = widthMatch[1];
+            score = Number(widthMatch[2]);
+          } else if (densityMatch) {
+            // Density descriptors cannot be compared to width descriptors
+            // numerically; treat 1x..3x as "smaller than any real width".
+            url = densityMatch[1];
+            score = Number(densityMatch[2]) * 10;
+          } else if (bareMatch) {
+            url = bareMatch[1];
+            score = 0;
+          }
+          if (url && score > bestWidth) {
+            bestWidth = score;
+            best = url;
+          }
+        }
+      }
+      const direct = (candidate.currentSrc || (candidate.getAttribute && candidate.getAttribute('src')) || '').trim();
+      if (direct && bestWidth < 0) best = direct;
+    }
+    if (!best && image) {
+      const style = image.getAttribute && image.getAttribute('style');
+      if (style) {
+        const match = /url\(["']?(.*?)["']?\)/.exec(style);
+        if (match) best = match[1];
+      }
+    }
+    return best || '';
+  }
+
+  /**
+   * Stable synthetic identity for builds that do not expose the track id in the
+   * player-bar DOM. `track.id` stays null until a sniffed spclient URL supplies
+   * the real id; everything cache/resolver-side keys on id || key.
+   */
+  function hash32(text) {
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < text.length; i++) {
+      hash ^= text.charCodeAt(i);
+      hash = (hash * 0x01000193) >>> 0;
+    }
+    return hash.toString(16).padStart(8, '0');
+  }
+
+  function extractTrackId(href) {
+    if (!href) return null;
+    const match = /\/track\/([A-Za-z0-9]{1,64})/.exec(String(href));
+    return match ? match[1] : null;
+  }
+
+  function readTrack() {
+    const bar = pick(SELECTORS.playerBar);
+    const widget = pick(SELECTORS.nowPlaying, bar) || bar || (typeof document !== 'undefined' ? document : null);
+
+    const link = pick(SELECTORS.trackLink, widget);
+    const href = (link && link.getAttribute && link.getAttribute('href')) || '';
+
+    // Most builds do not expose the id here; keep the href path for others.
+    let id = extractTrackId(href);
+    if (!id) {
+      const internal = pick(SELECTORS.trackLinkInternal, widget) || pick(SELECTORS.trackLinkInternal, bar || widget);
+      const internalHref = (internal && internal.getAttribute && internal.getAttribute('href')) || '';
+      id = extractTrackId(internalHref);
+    }
+
+    const titleElement = pick(SELECTORS.title, widget);
+    let title = titleElement && titleElement.textContent ? util.cleanText(titleElement.textContent) : '';
+    if (!title && link && link.textContent) title = util.cleanText(link.textContent);
+
+    let artist = '';
+    let album = '';
+    const arts = [];
+    const subtitleElements = pickAll(SELECTORS.subtitleLinks, widget);
+    for (const element of subtitleElements) {
+      const text = util.cleanText(element.textContent || '');
+      if (!text) continue;
+      // A subtitle wrapper that contains links is not itself a metadata value;
+      // its textContent would concatenate every artist name.
+      if (typeof element.querySelector === 'function' && element.querySelector('a[href]')) continue;
+      const elementHref = (element.getAttribute && element.getAttribute('href')) || '';
+      if (/\/artist\//.test(elementHref)) {
+        arts.push(text);
+        artist = arts.join(', ');
+      } else if (/\/album\//.test(elementHref)) {
+        album = album ? album + ', ' + text : text;
+      } else if (!artist) {
+        // No href classification available: first subtitle is the artist.
+        artist = text;
+        arts.push(text);
+      } else if (!album) {
+        album = text;
+      }
+    }
+
+    // The title anchor's href is the ALBUM path for tracks in this build; it is
+    // a useful album hint for the synthetic identity and for cache separation.
+    const albumHref = (link && link.getAttribute && link.getAttribute('href')) || '';
+    const keyParts = [title, arts.join('\u0000'), albumHref].join('|');
+    const key = title ? 'np:' + hash32(keyParts) : null;
+
+    // Some layouts repeat the artist list in a second, href-less subtitle node.
+    if (album && album.replace(/\s+/g, '') === artist.replace(/\s+/g, '')) album = '';
+
+    const durationMs = readDurationMs(bar || widget);
+
+    return {
+      id,
+      key,
+      albumHref,
+      uri: id ? 'spotify:track:' + id : null,
+      title,
+      artist,
+      album,
+      coverUrl: readCoverUrl(widget),
+      durationMs,
+      trackUrl: id ? 'https://open.spotify.com/track/' + id : null,
+    };
+  }
+
+  // Icon paths are locale-independent (evidence/10-playpause-icons.txt).
+  const PAUSE_PATHS = ['M2.7 1a.7.7', 'M5.7 3a'];
+  const PLAY_PATHS = ['M3 1.713a.7.7', 'm7.05 3.606'];
+
+  function readPlayingFromIcon(button) {
+    if (!button || typeof button.querySelector !== 'function') return null;
+    let path = null;
+    try {
+      path = button.querySelector('svg path');
+    } catch {
+      path = null;
+    }
+    const d = (path && path.getAttribute && path.getAttribute('d')) || '';
+    if (!d) return null;
+    for (const prefix of PAUSE_PATHS) {
+      if (d.startsWith(prefix)) return true;
+    }
+    for (const prefix of PLAY_PATHS) {
+      if (d.startsWith(prefix)) return false;
+    }
+    return null;
+  }
+
+  function readPlayLabel() {
+    const button = pick(SELECTORS.playPause);
+    if (!button) return null;
+    // SVG glyph first: aria-label is localised ("一時停止" was captured live).
+    const iconPlaying = readPlayingFromIcon(button);
+    if (iconPlaying != null) return iconPlaying;
+    const label = (button.getAttribute && (button.getAttribute('aria-label') || button.getAttribute('title'))) || '';
+    if (PAUSE_LABELS.test(label)) return true;
+    if (PLAY_LABELS.test(label)) return false;
+    return null;
+  }
+
+  /**
+   * Position/duration sources, in the order the shipped build prefers:
+   *   1. hidden range input inside the seek bar (value/max in ms)
+   *   2. its aria-valuetext ("m:ss/m:ss")
+   *   3. visible playback-position / playback-duration text
+   *   4. --progress-bar-transform percent (visual fallback)
+   *   5. older div[role=slider] aria-valuenow builds / demo harness
+   * Returns `{positionMs, precise, durationMs}` or null.
+   */
+  function readPosition(knownDurationMs) {
+    let durationMs = knownDurationMs > 0 ? knownDurationMs : 0;
+
+    // 1. current build: hidden range input (only meaningful when max > 0).
+    const range = readRangeInput();
+    if (range && range.max > 0) {
+      durationMs = Math.round(range.max);
+      const position = util.clamp(range.value != null ? range.value : 0, 0, range.max);
+      return { positionMs: Math.round(position), precise: true, durationMs };
+    }
+
+    // 2. same input's accessible text.
+    if (range) {
+      const fromText = parseAriaValueText(range.ariaValueText);
+      if (fromText && fromText.positionMs != null && fromText.durationMs > 0) {
+        return { positionMs: fromText.positionMs, precise: false, durationMs: fromText.durationMs };
+      }
+    }
+
+    // 3. visible clock text.
+    const positionElement = pick(SELECTORS.positionText);
+    const durationElement = pick(SELECTORS.durationText);
+    const textPosition = positionElement ? parseClock(positionElement.textContent) : null;
+    const textDuration = durationElement ? parseClock(durationElement.textContent) : null;
+    if (!durationMs && textDuration && textDuration > 0) durationMs = textDuration;
+    if (textPosition != null) return { positionMs: textPosition, precise: false, durationMs };
+
+    // 4. visual percentage.
+    const percent = readTransformPercent();
+    if (percent != null && durationMs > 0) {
+      return { positionMs: Math.round(percent * durationMs), precise: false, durationMs };
+    }
+
+    // 5. older slider builds / demo harness.
+    const slider = pick(SELECTORS.progressSlider);
+    if (slider) {
+      let scale = 1;
+      const rawMax = Number(slider.getAttribute && slider.getAttribute('aria-valuemax'));
+      if (isFinite(rawMax) && rawMax > 0) {
+        if (durationMs > 0) {
+          if (Math.abs(rawMax - durationMs) <= Math.max(2, durationMs * 0.15)) scale = 1;
+          else if (Math.abs(rawMax - durationMs / 1000) <= Math.max(2, (durationMs / 1000) * 0.15)) scale = 1000;
+          else scale = rawMax > 3600 ? 1 : 1000;
+        } else {
+          scale = rawMax > 3600 ? 1 : 1000;
+        }
+        if (!durationMs) durationMs = Math.round(rawMax * scale);
+      }
+      const rawNow = Number(slider.getAttribute && slider.getAttribute('aria-valuenow'));
+      if (isFinite(rawNow) && rawNow >= 0) {
+        return { positionMs: rawNow * scale, precise: true, durationMs };
+      }
+    }
+
+    return null;
+  }
+
+  /** An element that is actually laid out (hidden containers do not count). */
+  function isLaidOut(element) {
+    if (!element || !element.isConnected) return false;
+    try {
+      if (typeof element.checkVisibility === 'function' &&
+          !element.checkVisibility({ checkOpacity: false, checkVisibilityCSS: true })) {
+        return false;
+      }
+    } catch {
+      /* fall through to rects */
+    }
+    try {
+      return typeof element.getClientRects === 'function' && element.getClientRects().length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  function isNativeLyricsOpen() {
+    if (typeof document === 'undefined') return false;
+    for (const selector of SELECTORS.nativeLyrics) {
+      let elements;
+      try {
+        elements = document.querySelectorAll(selector);
+      } catch {
+        continue;
+      }
+      for (const element of elements) {
+        // The page can keep a hidden lyrics container mounted (demo harness and
+        // some SPA states); only a laid-out view means "lyrics view is open".
+        if (isLaidOut(element)) return true;
+      }
+    }
+    return false;
+  }
+
+  function resolvePlaying(labelPlaying, rawPosition) {
+    if (labelPlaying != null) {
+      lastPlaying = labelPlaying;
+      return labelPlaying;
+    }
+    const now = Date.now();
+    if (rawPosition != null) {
+      if (lastRawPosition == null) {
+        lastRawPosition = rawPosition;
+        lastAdvanceAt = now;
+        return lastPlaying;
+      }
+      const delta = rawPosition - lastRawPosition;
+      if (delta > 20) {
+        lastRawPosition = rawPosition;
+        lastAdvanceAt = now;
+        lastPlaying = true;
+        return true;
+      }
+      if (delta < -SEEK_JITTER_MS * 2) {
+        // A big backward jump while paused means a seek, not a pause transition.
+        lastRawPosition = rawPosition;
+        lastAdvanceAt = now;
+        return lastPlaying;
+      }
+      if (rawPosition !== lastRawPosition) lastRawPosition = rawPosition;
+      if (lastPlaying && now - lastAdvanceAt > 1500) {
+        // Position has been pinned for >1.5s: treat as paused.
+        lastPlaying = false;
+      }
+      return lastPlaying;
+    }
+    return lastPlaying;
+  }
+
+  function applyPlayback(reading, isPlaying) {
+    if (!reading) {
+      // No progress DOM at all: still publish the play/pause toggle state.
+      store.setPlayback(store.positionNow(), isPlaying);
+      return;
+    }
+    const durationMs = reading.durationMs || undefined;
+    if (reading.precise) {
+      store.setPlayback(reading.positionMs, isPlaying, { durationMs });
+      return;
+    }
+    if (!isPlaying) {
+      store.setPlayback(reading.positionMs, false, { durationMs });
+      return;
+    }
+    // Second-quantized DOM clock while playing: never re-base the interpolated
+    // clock backwards (that would fake a seek every poll). Pull it forward only.
+    const current = store.positionNow();
+    const target = reading.positionMs > current + 50 ? reading.positionMs : current;
+    store.setPlayback(target, true, { durationMs });
+  }
+
+  function pollOnce() {
+    if (!started) return;
+    if (typeof document === 'undefined') return;
+
+    const track = readTrack();
+    const previous = store.get().track;
+
+    // A sniffed spclient URL may have promoted a real id for this synthetic
+    // track; preserve it while the DOM still cannot expose an id.
+    if (!track.id && previous.id && previous.key && track.key === previous.key) {
+      track.id = previous.id;
+      track.uri = previous.uri || 'spotify:track:' + previous.id;
+      track.trackUrl = previous.trackUrl || 'https://open.spotify.com/track/' + previous.id;
+    }
+
+    const signature = [
+      track.id || '',
+      track.key || '',
+      track.title,
+      track.artist,
+      track.album,
+      track.coverUrl,
+      track.durationMs || 0,
+    ].join('\u0001');
+
+    if (signature !== lastTrackSignature) {
+      lastTrackSignature = signature;
+      // A real id always wins; before one is known the synthetic key is the
+      // track identity.
+      const identityChanged = track.id || previous.id
+        ? track.id !== previous.id
+        : (track.key || null) !== (previous.key || null);
+      const fields = {
+        id: track.id,
+        key: track.key,
+        uri: track.uri,
+        title: track.title,
+        artist: track.artist,
+        album: track.album,
+        coverUrl: track.coverUrl,
+        durationMs: track.durationMs || 0,
+        trackUrl: track.trackUrl,
+      };
+      if (identityChanged) {
+        // Track changed: setTrack clears the lyrics and the resolver re-runs.
+        lastRawPosition = null;
+        lastAdvanceAt = Date.now();
+        store.setPlayback(0, lastPlaying);
+        store.setTrack(fields);
+      } else {
+        // Same track: refresh metadata without clearing the resolved lyrics.
+        store.patch({ track: fields });
+      }
+    }
+
+    const labelPlaying = readPlayLabel();
+    const reading = readPosition(store.get().track.durationMs);
+    const isPlaying = resolvePlaying(labelPlaying, reading ? reading.positionMs : null);
+    applyPlayback(reading, isPlaying);
+
+    const nativeOpen = isNativeLyricsOpen();
+    if (nativeOpen !== lastNativeOpen) {
+      lastNativeOpen = nativeOpen;
+      store.patch({ ui: { nativeLyricsOpen: nativeOpen } });
+    }
+
+    // Drop our own optimistic seek marker once the DOM has caught up.
+    const playback = store.get().playback;
+    if (playback.seekSeq !== seekSeqSeen) seekSeqSeen = playback.seekSeq;
+  }
+
+  function schedulePoll() {
+    if (!started || mutationTimer) return;
+    mutationTimer = setTimeout(() => {
+      mutationTimer = 0;
+      pollOnce();
+    }, MUTATION_THROTTLE_MS);
+  }
+
+  function start() {
+    if (started) return;
+    if (typeof document === 'undefined') return;
+    started = true;
+    lastPlaying = false;
+    pollOnce();
+
+    pollTimer = setInterval(pollOnce, POLL_MS);
+
+    if (typeof MutationObserver === 'function') {
+      observer = new MutationObserver(schedulePoll);
+      try {
+        observer.observe(document.documentElement, {
+          subtree: true,
+          childList: true,
+          attributes: true,
+          attributeFilter: ['aria-valuenow', 'aria-label', 'aria-pressed', 'href', 'src', 'srcset', 'style'],
+        });
+      } catch {
+        observer = null;
+      }
+    }
+
+    window.addEventListener('popstate', schedulePoll);
+    window.addEventListener('hashchange', schedulePoll);
+  }
+
+  function stop() {
+    if (!started) return;
+    started = false;
+    clearInterval(pollTimer);
+    clearTimeout(mutationTimer);
+    pollTimer = 0;
+    mutationTimer = 0;
+    if (observer) observer.disconnect();
+    observer = null;
+    window.removeEventListener('popstate', schedulePoll);
+    window.removeEventListener('hashchange', schedulePoll);
+  }
+
+  /**
+   * The seek bar's wrapper and click target on the shipped build:
+   *   div[data-testid="playback-progressbar"]
+   *     > label > input[type=range] (hidden)
+   *     > div[data-testid="progress-bar"] > div[data-testid="progress-bar-background"]
+   * Older builds/demo use a single div[role=slider].
+   */
+  function findSeekSurface() {
+    const wrapper = pick(SELECTORS.playbackProgressbar);
+    const scopedBar = wrapper ? pick(['[data-testid="progress-bar"]'], wrapper) : null;
+    const scopedBackground = wrapper ? pick(['[data-testid="progress-bar-background"]'], wrapper) : null;
+    if (wrapper || scopedBar) {
+      return {
+        wrapper: wrapper || scopedBar,
+        target: scopedBar || wrapper,
+        background: scopedBackground || scopedBar || wrapper,
+      };
+    }
+    const fallback = pick(SELECTORS.progressBar);
+    if (!fallback) return null;
+    return {
+      wrapper: fallback,
+      target: fallback,
+      background: pick(['[data-testid="progress-bar-background"]']) || fallback,
+    };
+  }
+
+  function dispatchSeekSequence(target, x, y) {
+    if (!target || typeof target.dispatchEvent !== 'function') return false;
+    const base = { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, screenX: x, screenY: y };
+    try {
+      if (typeof PointerEvent === 'function') {
+        const pointer = Object.assign({}, base, {
+          pointerId: 1,
+          pointerType: 'mouse',
+          isPrimary: true,
+          button: 0,
+          buttons: 1,
+        });
+        target.dispatchEvent(new PointerEvent('pointerdown', pointer));
+        if (typeof window !== 'undefined') {
+          // The seek drag hook installs pointermove/pointerup listeners on the
+          // window; send the release there so it always sees it.
+          window.dispatchEvent(new PointerEvent('pointermove', Object.assign({}, pointer, { buttons: 1, button: -1 })));
+          window.dispatchEvent(new PointerEvent('pointerup', Object.assign({}, pointer, { buttons: 0 })));
+        }
+      }
+      // Older builds/demo harness listen for mouse events on the bar itself.
+      target.dispatchEvent(new MouseEvent('mousedown', Object.assign({}, base, { button: 0, buttons: 1 })));
+      target.dispatchEvent(new MouseEvent('mouseup', Object.assign({}, base, { button: 0, buttons: 0 })));
+      target.dispatchEvent(new MouseEvent('click', Object.assign({}, base, { button: 0, buttons: 0 })));
+    } catch {
+      return false;
+    }
+    return true;
+  }
+
+  /** Drives the hidden range input when the synthetic pointer sequence is ignored. */
+  function setRangeInputValue(targetMs, durationMs) {
+    const range = readRangeInput();
+    if (!range || !range.input || !(range.max > 0)) return false;
+    const input = range.input;
+    const ratio = durationMs > 0
+      ? util.clamp(targetMs / durationMs, 0, 1)
+      : util.clamp(targetMs / range.max, 0, 1);
+    const value = Math.round(ratio * range.max);
+    try {
+      const descriptor = typeof HTMLInputElement !== 'undefined'
+        ? Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')
+        : null;
+      if (descriptor && descriptor.set) descriptor.set.call(input, String(value));
+      else input.value = String(value);
+      input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+      if (typeof PointerEvent === 'function') {
+        const pointer = {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          pointerId: 1,
+          pointerType: 'mouse',
+          isPrimary: true,
+          button: 0,
+          buttons: 1,
+        };
+        input.dispatchEvent(new PointerEvent('pointerdown', pointer));
+        input.dispatchEvent(new PointerEvent('pointerup', Object.assign({}, pointer, { buttons: 0 })));
+      }
+      input.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, composed: true, button: 0, buttons: 1 }));
+      input.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, composed: true, button: 0, buttons: 0 }));
+    } catch {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Seek: synthetic pointer sequence on the seek track, optimistic localSeek,
+   * then a 400 ms re-read; if the position did not change, drive the hidden
+   * range input through its native value setter.
+   * Returns true when a dispatch path was available (not proof of movement).
+   */
+  function seek(positionMs) {
+    const state = store.get();
+    const target = Number(positionMs);
+    if (!isFinite(target)) return false;
+
+    let duration = state.track.durationMs;
+    if (!(duration > 0)) {
+      const range = readRangeInput();
+      if (range && range.max > 0) duration = range.max;
+    }
+    if (!(duration > 0)) return false;
+
+    const clampedTarget = util.clamp(Math.round(target), 0, duration);
+    const ratio = util.clamp(clampedTarget / duration, 0.001, 0.999);
+
+    const surface = findSeekSurface();
+    let attempted = false;
+
+    if (surface) {
+      const rectSource = surface.background || surface.target || surface.wrapper;
+      let rect = null;
+      try {
+        rect = rectSource && rectSource.getBoundingClientRect ? rectSource.getBoundingClientRect() : null;
+      } catch {
+        rect = null;
+      }
+      if (!rect || !(rect.width > 0) || !(rect.height > 0)) {
+        try {
+          rect = surface.target.getBoundingClientRect();
+        } catch {
+          rect = null;
+        }
+      }
+      if (rect && rect.width > 0 && rect.height > 0) {
+        const x = rect.left + rect.width * ratio;
+        const y = rect.top + rect.height / 2;
+        attempted = dispatchSeekSequence(surface.target, x, y);
+      }
+    }
+
+    if (!attempted) attempted = setRangeInputValue(clampedTarget, duration);
+    if (!attempted) return false;
+
+    store.localSeek(clampedTarget);
+
+    if (typeof setTimeout === 'function') {
+      setTimeout(() => {
+        try {
+          if (!started) return;
+          const reading = readPosition(store.get().track.durationMs || duration);
+          const observed = reading ? reading.positionMs : store.positionNow();
+          if (!isFinite(observed) || Math.abs(observed - clampedTarget) > 1500) {
+            if (setRangeInputValue(clampedTarget, duration)) store.localSeek(clampedTarget);
+          }
+        } catch {
+          /* verification is best effort */
+        }
+      }, 400);
+    }
+    return true;
+  }
+
+  SL.player = {
+    SELECTORS,
+    start,
+    stop,
+    seek,
+    /** Forces one synchronous DOM read; useful for tests and the demo harness. */
+    refresh: pollOnce,
+  };
+})();

@@ -1,0 +1,391 @@
+/*
+ * Spicy Lyrics for Chrome — lyric column.
+ *
+ * The stack is a normal flow column translated on the compositor by the spring
+ * in lyrics-view.js. Each line is measured once per resize/doc build; the
+ * active line rests at 42% of the stage height.
+ *
+ * Karaoke fill: every word (and every line-synced line) is a gradient-clipped
+ * span whose background-size is driven by --p (0..1). A dim background-color
+ * sits under the gradient so unsung text stays readable. Nothing is recreated
+ * per frame; only --p and the stack transform are written.
+ */
+
+.sl-lyrics {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 0.35s ease;
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 7%,
+    #000 26%,
+    #000 73%,
+    transparent 99%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 7%,
+    #000 26%,
+    #000 73%,
+    transparent 99%
+  );
+}
+
+.sl-stage[data-has-doc="0"] .sl-lyrics {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sl-column {
+  position: relative;
+  width: min(1260px, 86%);
+  height: 100%;
+  perspective: 1500px;
+  perspective-origin: 50% 42%;
+}
+
+.sl-stack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--sl-fs, 48px) * 0.55 * var(--sl-gap, 1));
+  transform: translate3d(0, 0, 0);
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.sl-row {
+  display: block;
+  position: relative;
+  transform-origin: center center;
+  transition: transform 0.5s var(--sl-ease, ease);
+}
+
+.sl-line {
+  position: relative;
+  font-weight: 800;
+  letter-spacing: -0.019em;
+  line-height: 1.16;
+  text-align: left;
+  color: #fff;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  line-break: strict;
+  text-wrap: pretty;
+  transform: scale(var(--s, 1));
+  transform-origin: left center;
+  filter: blur(var(--b, 0px));
+  opacity: var(--o, 1);
+  transition:
+    transform 0.5s var(--sl-ease, ease),
+    filter 0.5s ease,
+    opacity 0.5s ease;
+  will-change: transform, filter, opacity;
+}
+
+.sl-line[data-align="center"] {
+  text-align: center;
+  transform-origin: center center;
+}
+
+.sl-line[data-align="right"] {
+  text-align: right;
+  transform-origin: right center;
+}
+
+.sl-inner {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
+  text-align: inherit;
+}
+
+/* Background / ad-lib vocal lines are smaller and inset from the column edge. */
+.sl-line[data-bg="1"] .sl-inner {
+  font-size: 0.78em;
+  padding-left: 2.4%;
+  opacity: 0.72;
+  letter-spacing: -0.012em;
+}
+
+.sl-line[data-bg="1"][data-align="right"] .sl-inner {
+  padding-left: 0;
+  padding-right: 2.4%;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Depth states                                                              */
+/* ------------------------------------------------------------------------- */
+
+.sl-row[data-level="0"] .sl-line {
+  --s: 1.06;
+  --b: 0px;
+  --o: 1;
+  text-shadow: 0 3px 30px rgba(0, 0, 0, 0.42);
+}
+
+.sl-row[data-level="1"] .sl-line {
+  --s: 1;
+  --b: 1.6px;
+  --o: 0.48;
+}
+
+.sl-row[data-level="2"] .sl-line {
+  --s: 1;
+  --b: 2.4px;
+  --o: 0.3;
+}
+
+.sl-row[data-level="3"] .sl-line {
+  --s: 0.96;
+  --b: 3.4px;
+  --o: 0.2;
+}
+
+/* A lyric page, not a flat list: distant rows recede a little. */
+.sl-row[data-level="2"] {
+  transform: rotateX(2.6deg) translateZ(-26px);
+}
+
+.sl-row[data-level="3"] {
+  transform: rotateX(4.2deg) translateZ(-56px);
+}
+
+/* Hover affordance: clicking a line seeks to it. */
+.sl-row[data-kind="line"] {
+  cursor: pointer;
+}
+
+.sl-row[data-kind="line"]:hover:not([data-level="0"]) .sl-line {
+  --o: 0.72;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Karaoke fill                                                              */
+/* ------------------------------------------------------------------------- */
+
+.sl-w,
+.sl-t {
+  color: transparent;
+  background-color: var(--sl-word-dim, rgba(255, 255, 255, 0.34));
+  background-image: linear-gradient(
+    100deg,
+    var(--sl-hl-1, #ffffff) 0%,
+    var(--sl-hl-2, #ffd7e4) 62%,
+    var(--sl-hl-1, #ffffff) 100%
+  );
+  background-repeat: no-repeat;
+  background-size: calc(var(--p, 0) * 100%) 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sl-lyrics[data-highlight="solid"] .sl-w,
+.sl-lyrics[data-highlight="solid"] .sl-t {
+  background-image: linear-gradient(
+    90deg,
+    var(--sl-hl-1, #ffffff),
+    var(--sl-hl-1, #ffffff)
+  );
+}
+
+/* The word currently being sung gets a soft accent bloom. */
+.sl-w.is-active {
+  text-shadow:
+    0 0 16px var(--sl-accent-soft, rgba(255, 92, 138, 0.55)),
+    0 0 40px var(--sl-accent-faint, rgba(255, 92, 138, 0.22));
+}
+
+/* ------------------------------------------------------------------------- */
+/* Romanization                                                              */
+/* ------------------------------------------------------------------------- */
+
+.sl-roman {
+  margin-top: 0.14em;
+  padding-left: 0.02em;
+  font-size: calc(var(--sl-fs, 48px) * 0.29);
+  font-weight: 550;
+  letter-spacing: 0.005em;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.34);
+  text-align: inherit;
+  transform: translateY(-2px);
+  transition: color 0.4s ease;
+}
+
+.sl-row[data-level="0"] .sl-roman {
+  color: rgba(255, 255, 255, 0.56);
+}
+
+.sl-row[data-level="1"] .sl-roman {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.sl-row[data-level="2"] .sl-roman,
+.sl-row[data-level="3"] .sl-roman {
+  color: rgba(255, 255, 255, 0.18);
+}
+
+.sl-lyrics:not(.show-roman) .sl-roman {
+  display: none;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Interlude dots                                                            */
+/* ------------------------------------------------------------------------- */
+
+.sl-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  padding: 0.16em 0;
+  opacity: 0.6;
+  transition: opacity 0.5s ease;
+}
+
+.sl-dots i {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 16px var(--sl-accent-soft, rgba(255, 92, 138, 0.55));
+  animation: sl-dot-pulse 1.7s ease-in-out infinite;
+}
+
+.sl-dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.sl-dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.sl-row[data-kind="dots"][data-level="0"] .sl-dots {
+  opacity: 1;
+}
+
+.sl-row[data-kind="dots"][data-level="1"] .sl-dots {
+  opacity: 0.58;
+}
+
+.sl-row[data-kind="dots"][data-level="2"] .sl-dots {
+  opacity: 0.32;
+}
+
+.sl-row[data-kind="dots"][data-level="3"] .sl-dots {
+  opacity: 0.18;
+}
+
+@keyframes sl-dot-pulse {
+  0%,
+  100% {
+    transform: scale(0.62);
+    opacity: 0.28;
+  }
+  38% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.82);
+    opacity: 0.6;
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Paused: a slow breath so a still frame does not look frozen               */
+/* ------------------------------------------------------------------------- */
+
+.sl-lyrics.is-paused .sl-row[data-level="0"] .sl-line {
+  animation: sl-breathe 5.6s ease-in-out infinite;
+}
+
+@keyframes sl-breathe {
+  0%,
+  100% {
+    opacity: var(--o, 1);
+  }
+  50% {
+    opacity: calc(var(--o, 1) * 0.9);
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Reduced motion                                                            */
+/* ------------------------------------------------------------------------- */
+
+.sl-lyrics.is-static-motion .sl-row,
+.sl-lyrics.is-static-motion .sl-line {
+  transform: none;
+  transition: none;
+}
+
+.sl-lyrics.is-static-motion .sl-dots i,
+.sl-lyrics.is-static-motion.is-paused .sl-row[data-level="0"] .sl-line {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-row,
+  .sl-line,
+  .sl-roman {
+    transition: none;
+  }
+  .sl-dots i {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Compact overlay (panel mode, ~340px wide)                                 */
+/* ------------------------------------------------------------------------- */
+
+.sl-stage.is-compact .sl-column {
+  width: calc(100% - 26px);
+}
+
+.sl-stage.is-compact .sl-line {
+  letter-spacing: -0.012em;
+  line-height: 1.2;
+}
+
+/* Narrow columns bleed into the blurred art faster, so lift the inactive
+   states instead of letting far lines disappear. */
+.sl-stage.is-compact .sl-row[data-level="1"] .sl-line {
+  --s: 1;
+  --b: 1.1px;
+  --o: 0.6;
+}
+
+.sl-stage.is-compact .sl-row[data-level="2"] .sl-line {
+  --s: 1;
+  --b: 1.6px;
+  --o: 0.46;
+}
+
+.sl-stage.is-compact .sl-row[data-level="3"] .sl-line {
+  --s: 0.98;
+  --b: 2.2px;
+  --o: 0.36;
+}
+
+/* At this width the perspective tilt only costs legibility. */
+.sl-stage.is-compact .sl-row[data-level="2"],
+.sl-stage.is-compact .sl-row[data-level="3"] {
+  transform: none;
+}
+
+.sl-stage.is-compact .sl-roman {
+  font-size: calc(var(--sl-fs, 20px) * 0.34);
+}

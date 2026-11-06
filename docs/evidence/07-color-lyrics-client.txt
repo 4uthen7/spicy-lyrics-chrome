@@ -1,0 +1,40 @@
+# Evidence: color-lyrics v2 client built into the web player
+#
+# [A] API host constants (module 97270). i = https://spclient.wg.spotify.com
+#     Hj = `${i}/color-lyrics/v2` ; XE = `${i}/metadata/4`
+@5403079 (context 5403079..5404729):
+97270(e,t,r){"use strict";let i="https://spclient.wg.spotify.com",n="https://api-partner.spotify.com",a=`${i}/recently-played/v3`,s=`${i}/sponsoredplaylist/v1/sponsored`,o=`${i}/sponsoredplaylist/v1/mock/sponsored`,l=`${i}/playlist/v2`,u=`${i}/inspiredby-mix/v2`,c=`${i}/ads`,d=`${n}/pathfinder/v1`,p=`${n}/pathfinder/v2`,h=`${i}/age-verification/v1`,f=`${i}/color-lyrics/v2`,m=`${i}/metadata/4`,g=`${i}/user-profile-view/v3`,v=`${i}/soundfinder/v1`,y=`${i}/`,b=`${i}/socialgraph/v4`,E=`${i}/playlist-permission/v1`,T=`${i}/blend-invitation`,_=`${i}/spotify.audiobookcashier.v1.AudiobookCashier`,S=`${i}/the-stage/v1`,A=`${i}/profile-privacy`,I=`${i}/cultural-moment/v1`,C=`${i}/transcript-read-along/v2`,R=`${i}/podcast-ap4p`,O=`${i}/ad-dsa-metadata-lookup`,N=`${i}/gander/v2`,k=`${i}/spotify-user-profile-service`,P=`${i}/playlistextender`,w=`${i}/assisted-curation/v1/recommendations/curation/uri`,x=`${i}/podcast-charts-service/v2/charts/hubs`,L=`${i}/ratings/v1`,D=`${i}/library-import/v1`,U=`${i}/speakeasy/v2`;r.d(t,{},{CC:L,Cd:p,EN:b,FN:v,Hj:f,I9:R,I_:i,J8:d,L1:y,LG:I,MR:s,MW:O,P_:"https://wgint.spotify.net/curiosity/v1",Pl:k,RQ:_,SX:w,Ty:g,XE:m,Yt:"https://admocker.spotify.com",ZJ:E,Zc:"https://exp.wg.spotify.com",ao:C,d:h,dv:N,eX:l,mz:u,oD:c,p$:D,qE:a,sG:P,sp:S,t2:T,t_:o,uV:U,us:A,vH:x})},57285(e,t,r){"use strict";var i=r(97270);r.d(t,{},{Y:(e,t)=>e.build().withHost(i.mz).withPath(`/seed_to_playlist/${t}`).withQueryParameters({"response-format":"json"}).withoutMarket().withEndpointIdentifier("/seed_to_playlist/{uri}").send()})},41609(e,t,r){"use strict";var i=r(97270);function n(e,t){let r="u">typeof window&&window.navigator&&window.navigato
+
+# [B] color-lyrics request builder (module 46796, exports {S,z})
+#     S(client, trackUri, imageUrl, vocalRemoval, clientLanguage) ->
+#       host Hj + path `/track/{trackId}/image/{encodeURIComponent(imageUrl)}`
+#       query { format:"json", vocalRemoval, [clientLanguage] }   (+ market is injected by the client)
+#     z(client, trackUri) -> host XE + path `/track/{trackId}` (availability check; response has_lyrics)
+@3712559 (context 3712559..3713459):
+46796(e,t,r){"use strict";var i=r(22092),n=r(97270);let a=async(e,t,r,a,s)=>{let o=(0,i.o_h)(t).id,l={format:"json",vocalRemoval:a};return s&&(l.clientLanguage=s),(await e.build().withHost(n.Hj).withPath(`/track/${encodeURIComponent(o)}/image/${encodeURIComponent(r)}`).withQueryParameters(l).withEndpointIdentifier("/track/{trackId}").send()).body},s=async(e,t)=>{let r=(0,i.Y8v)((0,i.o_h)(t)?.id);if(!r)return!1;let a=await e.build().withHost(n.XE).withPath(`/track/${encodeURIComponent(r)}`).withEndpointIdentifier("/track/{trackId}").send();return a.body?.has_lyrics||!1};r.d(t,{},{S:a,z:s})},84778(e,t,r){"use strict";var i=r(11543),n=r(20384),a=r(22092),s=r(76687),o=r(31956),l=r(32203),u=r(27591),c=r(60355),d=r(3071),p=r(78176),h=r(45328);let f=(0,u.m5)("MusicVideoPrereleaseRoute",c.Jx.IDENTITY_TRAIT,c.Jx.PUBLISHING_METADATA_TRAIT),m=({pathname:e})=>{let t=(0,n.zy)(),r=new URLSearchParams(t.search);r.d
+
+# [C] response consume (module 26655): the response fields the web player reads
+@3709115 (context 3709115..3710815):
+26655(e,t,r){"use strict";r.d(t,{I:()=>T});var i=r(87183),n=r(82831),a=r(28833),s=r(7579),o=r(95311),l=r(30155),u=r(46796),c=r(29836),d=r(41527),p=r(12613);async function h(e,t,r,i=!1,n){try{var a,s;let o=await (0,u.S)(e,t,r,i,n);return{hasLyrics:!0,isTimeSynced:(a=o.lyrics.syncType,"LINE_SYNCED"===a||"SYLLABLE_SYNCED"===a),syncType:o.lyrics.syncType,lyrics:o.lyrics.lines.map(f),colors:(s=o.colors,{text:m(s.text),activeText:m(s.highlightText),background:m(s.background)}),dynamicColors:null,provider:o.lyrics.provider,providerDisplayName:o.lyrics.providerDisplayName,providerLyricsId:o.lyrics.providerLyricsId,hasVocalRemoval:o.hasVocalRemoval??!1,showUpsell:!1,alternatives:o.lyrics.alternatives,previewLines:o.lyrics.previewLines.map(f),capStatus:o.lyrics.capStatus}}catch(e){if(e instanceof c.O&&404===e.status)return{hasLyrics:!1};throw e}}function f(e,t,r){let{startTimeMs:i,words:n}=e,a=r[t+1];return{start:Number(i)||0,end:a?.startTimeMs?Number(a.startTimeMs):1/0,text:n}}function m(e){return d.Q.fromInt(e).toCSS(p.a.RGB)}var g=r(50396),v=r(78802),y=r(46289),b=r(3719);let E={hasLyrics:!1},T=(e,t)=>{let r=(0,y.h)(t||void 0,{desiredLabel:"large",desiredSize:600})??t?.[0]?.url??"",u=(0,v.g)(r?[r]:[]).data??null,c=(0,g.A)(),d=(0,l.X)(),p=(0,a.NC)(b.kA,{loadingValue:b.LZ.CONTROL}),f={[b.LZ.CONTROL]:void 0,[b.LZ.SYSTEM_LANGUAGE]:navigator.language,[b.LZ.ALL_LANGUAGES]:"all"}[p],m=["lyrics",{uri:e,image:r,vocalRemoval:d}],{hasLyrics:T,isLoading:_}=(0,o.f)(e),{data:S,isLoading:A,isError:I}=(0,n.I)({queryKey:m,queryFn:async()=>e&&r?await h(c,e,r,d,f):E,gcTime:s.k,staleTime:6e5,enabled:T}),C=_||A;return{data:(0,i.useMemo)(()=>C?null:T?S?.hasLyrics?{...S,dynamicColors:u}:S??null:E,[C,T,S,u]),loading
+
+# [D] availability hook (module 95311): /metadata/4/track/{id} -> body.has_lyrics
+@3710842 (context 3710842..3711542):
+95311(e,t,r){"use strict";var i=r(82831),n=r(70401),a=r(28833),s=r(22092),o=r(7579),l=r(46796),u=r(49379),c=r(50396);r.d(t,{},{f:e=>{let t=!!e&&(0,s.U_m)(e),r=(0,c.A)(),d=(0,a.NC)(u.s6w)&&t,{data:p,isLoading:h}=(0,i.I)({queryKey:["useLyricsAvailability",e],queryFn:async()=>!!e&&await (0,l.z)(r,e),gcTime:o.k,staleTime:6e5,enabled:d,placeholderData:n.rX});return{isLoading:h,hasLyrics:!!d&&(p??!1)}}})},81971(e,t,r){"use strict";var i=r(26655),n=r(88611);r.d(t,{},{J:()=>{let e=(0,n.o)(e=>e?.item,(e,t)=>e?.uri===t?.uri);return(0,i.I)(e?.uri,e?.images)}})},30155(e,t,r){"use strict";var i=r(28833),n=r(49379),a=r(75265);r.d(t,{},{X:()=>{let{isSupported:e}=(0,a.S)().getCapabilities();return(0,i.NC)(n.OBX,{loading
+
+# [E] global request headers installed on every spclient request (module context)
+@5137174 (context 5136974..5137574):
+.connect()}),i.connect(),i}),function({transport:e,accessToken:t,session:r,version:i,appPlatform:n}){eF.n.setTransport(e),eF.n.setLocale(r.locale),eF.n.setMarket(r.market),eF.n.setAccessToken(t),eF.n.setGlobalRequestHeaders([["App-Platform",n],["Spotify-App-Version",i]])}({transport:A.resolve(ob.sD),accessToken:O.accessToken,session:L,version:S,appPlatform:I.app_platform}),A.registerFactory(ob.Fi,()=>eU()),A.registerValue(iC.z,eF.n.getInstance()),A.registerFactory(dQ.v,e=>new hM(e.resolve(iC.z))),A.registerFactory(c9.zk,e=>(0,c9.lY)(e.resolve(iC.z))),A.registerFactory(c7,e=>c6(e.resolve(c9.zk))),A.registerFactory(un.y,e=>new uu(e.re
+
+# Consequences:
+#  - The web player (build web-player_2026-11-06, client 1.3.10.15.g21d156ee0039) calls the /image/{imageUrl}
+#    VARIANT of color-lyrics v2, not the bare /track/{id} variant.
+#  - market is added automatically by the transport: "from_token" for authenticated sessions, explicit
+#    country for anonymous (see module 5134218 region: `market:O.isAnonymous?N.market:"from_token"`).
+#  - App-Platform and Spotify-App-Version are added to every spclient request.
+
+# [F] market selection for the transport (main chunk, module ~5134218 region): for authenticated users the
+#     market query parameter is "from_token"; anonymous sessions send an explicit country code.
+@5134814 (context): ...L={isAnonymous:O.isAnonymous,market:O.isAnonymous?N.market:"from_token",locale:R};
+# [G] global headers applied to every spclient request (main chunk, module ~5137201 region):
+@5137201 (context): ...setGlobalRequestHeaders([["App-Platform",n],["Spotify-App-Version",i]])}({transport:A.resolve(ob.sD),accessToken:O.accessToken,session:L,version:S,appPlatform:I.app_platform})
+#     app_platform constant: I={app_platform:"WebPlayer",...}; clientVersion from appServerConfig (1.3.10.15.g21d156ee0039)

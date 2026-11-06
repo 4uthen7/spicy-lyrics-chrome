@@ -1,0 +1,26 @@
+{
+  "colors": {
+    "background": "#101012",
+    "text": "#ededed",
+    "highlightText": "#ededed"
+  },
+  "lyrics": {
+    "syncType": "UNSYNCED",
+    "provider": "Musixmatch",
+    "language": "en",
+    "lines": [
+      {
+        "startTimeMs": "0",
+        "endTimeMs": "0",
+        "words": "static words on a page",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "0",
+        "endTimeMs": "0",
+        "words": "no clock to follow",
+        "syllables": []
+      }
+    ]
+  }
+}

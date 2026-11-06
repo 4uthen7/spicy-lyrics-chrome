@@ -1,0 +1,186 @@
+# Evidence: data-testid inventory per shipped file (exact string match over minified JS)
+#
+# file: web-player.73b73c08.js (4542980 bytes)
+F, H, LayoutResizer__resize-bar, ad-countdown-timer, add-button, age-restricted-placeholder, age-restricted-placeholder-icon, audiobook-icon, bottom-sentinel, browse-button, c, card-image-age-restricted, card-image-fallback, carousel-next-button, carousel-previous-button, carousel-scroller, circleColor, clear-button, clickable-timestamp, column-header-context-menu, comment-reaction-toggle-button, comment-replies-toggle-button, comment-reply-toggle-button, confirm-dialog-description, context-item-info-ad-subtitle, context-item-info-ad-title, context-item-info-artist, context-item-info-book, context-item-info-quality, context-item-info-show, context-item-info-subtitles, context-item-info-title, context-item-link, context-menu, controlled-tooltip, d, description-button, dot-icon, drag-label-icon, e, enhance-badge, error-page, expand-button, f, global-nav-bar, herocard-click-handler, home-button, hover-or-focus-tooltip, i, infinite-scroll-list, internal-track-link, loadMoreSentinel, loading-page, loadingIcon, login-button, login-trigger, lyrics-line, more-button, n, notification-dot, npv-artist-bio-button, npv-artist-bio-placeholder-wrapper, npv-artist-link, offer-name, placeholder-wrapper, play-button, podcast-icon, popover, r, read-along-scroll-container, rich-title-row-shelf-header, root, s, save-action-icon-placeholder, save-action-label-placeholder, scroll-card-ad, scroll-card-loading, search-icon, search-input, see-all-link, sensitive-comments-hide-button, sensitive-comments-show-all-button, sensitive-replies-toggle, show-more-replies-button, signup-button, this, top-bar-back-button, top-bar-forward-button, top-sentinel, track-icon, tracklist-row, tracklist-row-placeholder, u, unauth-user-widget-link, underlay, upgrade-button, user-icon, user-widget-dropdown-logout, user-widget-link, user-widget-menu, user-widget-update-available, username-first-letter, video-card-image-masked, video-icon, video-player-cinema
+
+# file: encore~web-player.bde3d4f4.js (575290 bytes)
+dialogTitle, filled-track, loadMoreSentinel, mouse-only-link, no-items-label, overflow-end-button, overflow-start-button, progress-circle, track, underlay
+
+# file: vendor~web-player.5858da05.js (1592046 bytes)
+footer-div
+
+# file: dwp-now-playing-bar.0af8a902.js (59352 bytes)
+CoverSlotCollapsed__container, ad-controls, context-ad-logo, context-item-info-quality, control-button-sleep-timer, cover-art-button, cover-art-container, cover-art-placeholder, e, general-controls, now-playing-bar, now-playing-widget, now-playing-widget-v2, now-playing-widget-v2-byline, player-controls, signup-bar, video-player-npb
+
+# file: 8153.ab3c6bb5.js (53843 bytes)
+R, S, o, playback-duration, playback-position, playback-progressbar, r, s, saber-hilt-button, thumbnail-preview
+
+# file: 9398.22ff7630.js (22656 bytes)
+control-button-playback-speed, control-button-playpause, control-button-repeat, control-button-seek-back-15, control-button-seek-forward-15, control-button-shuffle, control-button-skip-back, control-button-skip-forward, volume-bar, volume-bar-toggle-mute-button
+
+# file: 5424.16cb1d45.js (21697 bytes)
+context-link, cover-drop-target, enhance-badge
+
+# file: 4076.c8b69942.js (14972 bytes)
+button-dislike-ad, button-like-ad, not-interested-reasons-menu
+
+# file: 6454.025fa50a.js (12141 bytes)
+
+
+# file: 1186.99674601.js (10991 bytes)
+
+
+# Live DOM (headless Chrome 157, logged-out, https://open.spotify.com/intl-ja/track/...#login):
+# querySelectorAll("[data-testid]") counts:
+{
+ "root": 1,
+ "global-nav-bar": 1,
+ "home-button": 1,
+ "search-icon": 1,
+ "search-input": 1,
+ "clear-button": 1,
+ "browse-button": 1,
+ "signup-button": 1,
+ "login-button": 1,
+ "unauth-user-widget-link": 1,
+ "top-sentinel": 4,
+ "bottom-sentinel": 4,
+ "left-sidebar-footer": 1,
+ "left-sidebar-legal-links": 1,
+ "language-selection-button": 1,
+ "LayoutResizer__resize-bar": 1,
+ "now-playing-bar": 1,
+ "signup-bar": 1,
+ "player-controls": 1,
+ "general-controls": 1,
+ "control-button-skip-back": 1,
+ "control-button-playpause": 1,
+ "control-button-skip-forward": 1,
+ "control-button-repeat": 1,
+ "playback-position": 1,
+ "playback-progressbar": 1,
+ "progress-bar": 2,
+ "progress-bar-background": 2,
+ "progress-bar-handle": 2,
+ "playback-duration": 1,
+ "volume-bar": 1,
+ "volume-bar-toggle-mute-button": 1,
+ "topbar": 1,
+ "topbar-content-wrapper": 1,
+ "topbar-content": 1,
+ "play-button": 52,
+ "track-page": 1,
+ "entity-header": 1,
+ "entityTitle": 1,
+ "creator-link": 1,
+ "release-date": 1,
+ "playcount": 1,
+ "action-bar": 1,
+ "action-bar-row": 1,
+ "action-bar-row-actions": 1,
+ "add-button": 1,
+ "more-button": 12,
+ "grid-container": 7,
+ "component-shelf": 6,
+ "video-card-image": 1,
+ "lyrics-container": 1,
+ "static-activation-trigger": 1,
+ "track-artist-link-card-container": 1,
+ "track-artist-link-card": 1,
+ "entity-image": 2,
+ "track-list": 3,
+ "tracklist-row-placeholder": 6,
+ "tracklist-row": 10,
+ "internal-track-link": 5,
+ "rich-title-row-shelf-header": 5,
+ "see-all-link": 5,
+ "card-image": 50,
+ "footer-div": 1,
+ "PanelHeader_CloseButton": 1,
+ "dialog-root": 1,
+ "upsell-download-app-button": 1,
+ "language-selection-modal": 1,
+ "close-button": 1,
+ "language-option-en": 1,
+ "language-option-af": 1,
+ "language-option-am": 1,
+ "language-option-ar": 1,
+ "language-option-ar-EG": 1,
+ "language-option-ar-MA": 1,
+ "language-option-ar-SA": 1,
+ "language-option-az": 1,
+ "language-option-bg": 1,
+ "language-option-bho": 1,
+ "language-option-bn": 1,
+ "language-option-bs": 1,
+ "language-option-ca": 1,
+ "language-option-cs": 1,
+ "language-option-da": 1,
+ "language-option-de": 1,
+ "language-option-el": 1,
+ "language-option-en-GB": 1,
+ "language-option-es": 1,
+ "language-option-es-419": 1,
+ "language-option-es-AR": 1,
+ "language-option-es-MX": 1,
+ "language-option-et": 1,
+ "language-option-eu": 1,
+ "language-option-fa": 1,
+ "language-option-fi": 1,
+ "language-option-fil": 1,
+ "language-option-fr": 1,
+ "language-option-fr-CA": 1,
+ "language-option-gl": 1,
+ "language-option-gu": 1,
+ "language-option-he": 1,
+ "language-option-hi": 1,
+ "language-option-hr": 1,
+ "language-option-hu": 1,
+ "language-option-id": 1,
+ "language-option-is": 1,
+ "language-option-it": 1,
+ "language-option-ja": 1,
+ "language-option-kn": 1,
+ "language-option-ko": 1,
+ "language-option-lt": 1,
+ "language-option-lv": 1,
+ "language-option-mk": 1,
+ "language-option-ml": 1,
+ "language-option-mr": 1,
+ "language-option-ms": 1,
+ "language-option-nb": 1,
+ "language-option-ne": 1,
+ "language-option-nl": 1,
+ "language-option-or": 1,
+ "language-option-pa-IN": 1,
+ "language-option-pa-PK": 1,
+ "language-option-pl": 1,
+ "language-option-pt-BR": 1,
+ "language-option-pt-PT": 1,
+ "language-option-ro": 1,
+ "language-option-ru": 1,
+ "language-option-sk": 1,
+ "language-option-sl": 1,
+ "language-option-sr": 1,
+ "language-option-sv": 1,
+ "language-option-sw": 1,
+ "language-option-ta": 1,
+ "language-option-te": 1,
+ "language-option-th": 1,
+ "language-option-tr": 1,
+ "language-option-uk": 1,
+ "language-option-ur": 1,
+ "language-option-vi": 1,
+ "language-option-zh-CN": 1,
+ "language-option-zh-HK": 1,
+ "language-option-zh-TW": 1,
+ "language-option-zu": 1
+}
+
+# Present while logged out but idle (no track loaded):
+#   now-playing-bar, player-controls, general-controls, control-button-playpause, playback-position,
+#   playback-duration, playback-progressbar, progress-bar, progress-bar-background, progress-bar-handle,
+#   volume-bar, signup-bar, global-nav-bar, login-button, signup-button
+# Absent while logged out (need an authenticated track):
+#   now-playing-widget, now-playing-widget-v2, context-item-info-title, context-item-info-artist,
+#   cover-art-button, cover-art-image, lyrics-line

@@ -1,0 +1,119 @@
+{
+  "lyrics": {
+    "syncType": "LINE_SYNCED",
+    "lines": [
+      {
+        "startTimeMs": "2000",
+        "endTimeMs": "5680",
+        "words": "paper radio",
+        "syllables": [],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "6000",
+        "endTimeMs": "10048",
+        "words": "tune the rooms we used to know",
+        "syllables": [],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "10400",
+        "endTimeMs": "14448",
+        "words": "glasshouse in the snow",
+        "syllables": [],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "14800",
+        "endTimeMs": "19216",
+        "words": "every window keeps the cold",
+        "syllables": [],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "19600",
+        "endTimeMs": "24016",
+        "words": "i learned to sleep inside the sound",
+        "syllables": [],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "24400",
+        "endTimeMs": "28816",
+        "words": "of everything that lets me down",
+        "syllables": [],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "29200",
+        "endTimeMs": "33248",
+        "words": "paper radio",
+        "syllables": [],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "33600",
+        "endTimeMs": "38384",
+        "words": "say the words and let them go",
+        "syllables": [],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "44000",
+        "endTimeMs": "48600",
+        "words": "oh, the wires are singing low",
+        "syllables": [],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "49000",
+        "endTimeMs": "54336",
+        "words": "oh, the wires are singing low",
+        "syllables": [],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "54800",
+        "endTimeMs": "59032",
+        "words": "glasshouse in the snow",
+        "syllables": [],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "59400",
+        "endTimeMs": "64000",
+        "words": "i am warmer than i know",
+        "syllables": [],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "64400",
+        "endTimeMs": "68448",
+        "words": "paper radio",
+        "syllables": [],
+        "alternatives": []
+      },
+      {
+        "startTimeMs": "68800",
+        "endTimeMs": "73584",
+        "words": "paper radio",
+        "syllables": [],
+        "alternatives": []
+      }
+    ],
+    "provider": "Musixmatch",
+    "providerLyricsId": "demo-2Fxmhks0bxGSBdJ92vM42m",
+    "providerDisplayName": "Musixmatch",
+    "colors": {
+      "background": -16777216,
+      "text": -1,
+      "highlightText": -16777216
+    },
+    "hasVocalRemoval": false
+  },
+  "colors": {
+    "background": -16777216,
+    "text": -1,
+    "highlightText": -16777216
+  }
+}

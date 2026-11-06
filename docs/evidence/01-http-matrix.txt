@@ -1,0 +1,66 @@
+# Evidence: every URL attempted, HTTP status and byte size
+# Method: curl 8.7.1, desktop Chrome 157 UA:
+#   Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36
+# size_download is the encoded transfer size unless --compressed is noted. HEAD was not used.
+#
+# label | url | http_status | bytes | content-type
+page-root | https://open.spotify.com/ | 200 | 168891 | text/html; charset=utf-8
+page-intl | https://open.spotify.com/intl-ja/ | 302 | 17 | text/html; charset=utf-8
+page-login | https://open.spotify.com/login | 404 | 4338 | text/html; charset=utf-8
+page-download | https://open.spotify.com/download | 200 | 168899 | text/html; charset=utf-8
+page-nd1 | https://open.spotify.com/?nd=1 | 200 | 168891 | text/html; charset=utf-8
+page-track | https://open.spotify.com/track/3n3Ppam7vgaVa1iaRUc9Lp | 200 | 169127 | text/html; charset=utf-8
+get_access_token | https://open.spotify.com/get_access_token?reason=transport&productType=web_player | 403 | 431 | text/html; charset=utf-8
+get_access_token_json | https://open.spotify.com/get_access_token?reason=transport&productType=web_player | 403 | 431 | text/html; charset=utf-8
+api_server_time | https://open.spotify.com/api/server-time | 200 | 25 | application/json; charset=utf-8
+html-manifest | https://open.spotifycdn.com/cdn/build/web-player/web-player.9cf426b0.css | 200 | 516101 | text/css
+css | https://open.spotifycdn.com/cdn/build/web-player/web-player.9cf426b0.css | 200 | 516101 | text/css
+js-main | https://open.spotifycdn.com/cdn/build/web-player/web-player.73b73c08.js | 200 | 4542980 | text/javascript
+js-vendor | https://open.spotifycdn.com/cdn/build/web-player/vendor~web-player.5858da05.js | 200 | 1592046 | text/javascript
+js-encore | https://open.spotifycdn.com/cdn/build/web-player/encore~web-player.bde3d4f4.js | 200 | 575290 | text/javascript
+pwa-manifest | https://open.spotifycdn.com/cdn/generated/manifest-web-player.1609946b.json | 200 | 422 | application/json
+locale-en-gz | https://open.spotifycdn.com/cdn/generated-locales/web-player/en.d77c2d39.json | 200 | 47552 | application/json
+chunk-dwp-now-playing-bar.0af8a902.js | https://open.spotifycdn.com/cdn/build/web-player/dwp-now-playing-bar.0af8a902.js | 200 | 59352 | text/javascript
+chunk-8153.ab3c6bb5.js | https://open.spotifycdn.com/cdn/build/web-player/8153.ab3c6bb5.js | 200 | 53843 | text/javascript
+chunk-9398.22ff7630.js | https://open.spotifycdn.com/cdn/build/web-player/9398.22ff7630.js | 200 | 22656 | text/javascript
+chunk-5424.16cb1d45.js | https://open.spotifycdn.com/cdn/build/web-player/5424.16cb1d45.js | 200 | 21697 | text/javascript
+chunk-4076.c8b69942.js | https://open.spotifycdn.com/cdn/build/web-player/4076.c8b69942.js | 200 | 14972 | text/javascript
+chunk-6454.025fa50a.js | https://open.spotifycdn.com/cdn/build/web-player/6454.025fa50a.js | 200 | 12141 | text/javascript
+chunk-1186.99674601.js | https://open.spotifycdn.com/cdn/build/web-player/1186.99674601.js | 200 | 10991 | text/javascript
+color-lyrics-anon | https://spclient.wg.spotify.com/color-lyrics/v2/track/3n3Ppam7vgaVa1iaRUc9Lp?format=json&market=from_token&vocalRemoval=false&productType=web_player | 400 | 0 | 
+metadata4-anon | https://spclient.wg.spotify.com/metadata/4/track/3n3Ppam7vgaVa1iaRUc9Lp?market=from_token | 404 | 0 | 
+clienttoken | https://clienttoken.spotify.com/v1/clienttoken | 405 | 0 | 
+
+# Additional probes from a REAL headless Chrome session (CDP Runtime.evaluate on the live page):
+#   GET /api/token?reason=init&productType=web-player&totp=<6 digits redacted>&totpServer=<6 digits>&totpVer=61  -> HTTP 200, JSON token
+#   POST https://clienttoken.spotify.com/v1/clienttoken -> HTTP 200, granted_token JSON (body starts: "{\"response_type\":\"RESPONSE_GRANTED_TOKEN_RESPONSE\"")
+#   POST https://open.spotify.com/remote-config-resolver/v3/unauth/configuration -> HTTP 200
+#   GET https://open.spotify.com/api/server-time -> HTTP 200, {"serverTime":...} (25 bytes)
+#   GET https://open.spotify.com/intl-ja/ -> HTTP 302, 17 bytes (redirect stub; follow with -L lands on the shell)
+#
+# curl without a browser session:
+#   GET /get_access_token?reason=transport&productType=web_player -> HTTP 403 Varnish "URL Blocked" page (431 bytes).
+#   The logged-in browser session was NOT available in this environment, so the authenticated response was not captured.
+
+# Extra probes added after the first matrix run (same UA, curl -L):
+# accounts.spotify.com/login                         -> 200, 30015 bytes text/html (real login page)
+# open.spotify.com/intl-ja/login                     -> 404,  4338 bytes (no such web-player route)
+# open.spotify.com/lyrics/fullscreen                 -> 404,  4350 bytes (client-side-only route; server 404)
+# open.spotify.com/get_access_token                  -> 403,   431 bytes (Varnish "URL Blocked")
+# open.spotify.com/api/token                         -> 400,  2586 bytes JSON Unauthorized request (no TOTP)
+# open.spotify.com/api/token?reason=transport&productType=web-player -> 400, 2586 bytes JSON Unauthorized request (no TOTP)
+# open.spotify.com/api/server-time                   -> 200,    25 bytes {"serverTime":1793938844}
+# spicylyrics.org/                                   -> 200,  8859 bytes, but Cloudflare challenge page
+#                                                        (<meta name="robots" content="noindex">, cdn-cgi/challenge-platform);
+#                                                        no application JS retrievable. Not usable as a code source here.
+
+# Manually probed rows that were not in the first matrix run:
+# https://api.spotify.com/v1/tracks/3n3Ppam7vgaVa1iaRUc9Lp?market=from_token
+#   (anonymous bearer token)                                      -> 429, 80 bytes (API rate limit exceeded)
+# https://spclient.wg.spotify.com/color-lyrics/v2/track/<id>/image/<empty>?format=json&vocalRemoval=false
+#   (anonymous bearer + client-token; empty image path on purpose) -> 404, 0 bytes (path shape only)
+# https://spclient.wg.spotify.com/color-lyrics/v2/track/<id>?format=json
+#   (anonymous bearer + client-token)                             -> 400, 0 bytes
+# https://spclient.wg.spotify.com/color-lyrics/v2/track/<id>?format=json&vocalRemoval=false&productType=web_player
+#   (anonymous bearer + client-token)                             -> 400, 0 bytes
+# three track ids tried: 3n3Ppam7vgaVa1iaRUc9Lp, 0VjIjW4GlUZAMYd2vXMi3b, 4cOdK2wGLETKBW3PvgPWqT

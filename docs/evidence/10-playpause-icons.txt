@@ -1,0 +1,16 @@
+# Evidence: play/pause icon assets inside the shipped bundles (locale-independent state detection)
+#
+# Pause icon (16px), module 67055 in main chunk:
+@390637 (context 390037..391137):
+-.222l-2.7-6.503c-.536-1.327.417-2.24 1.662-1.66z'/>"}],d||24),h=e.autoMirror??!1;return a.createElement(r.In,{...e,...c,autoMirror:h,viewBox:`0 0 ${u.size} ${u.size}`,dangerouslySetInnerHTML:{__html:`${(t=e.title,i=e.titleId,t?`<title ${i?`id="${i}"`:""}>${t}</title>`:"")}${(l=e.desc,o=e.descId,l?`<desc ${o?`id="${o}"`:""}>${l}</desc>`:"")}${u.svgContent}`}})}i.d(t,{g:()=>l})},67055(e,t,i){if(3400==i.j)var n=i(38331);if(3400==i.j)var r=i(35446);var a=i(87183);function l(e){let t,i,l,o,{effectiveSize:s,propOverride:c}=(0,n.i)(e),d=s?r.$Z[s]:e.iconSize,u=(0,r._C)([{size:16,svgContent:"<path d='M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7z'/>"},{size:24,svgContent:"<path d='M5.7 3a.7.7 0 0 0-.7.7v16.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V3.7a.7.7 0 0 0-.7-.7zm10 0a.7.7 0 0 0-.7.7v16.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V3.7a.7.7 0 0 0-.7-.7z'/>"}],d||24),h=e.autoMirror??!1;return a.createElement(r.In,{...e,...c,autoMirror:h,viewBox:`0 0 ${u.size} ${u.size}`,dangerouslySetI
+
+# Play icon (16px), module 56039 in main chunk:
+@395704 (context 395404..396204):
+<desc ${o?`id="${o}"`:""}>${l}</desc>`:"")}${u.svgContent}`}})}i.d(t,{H:()=>l})},56039(e,t,i){if(3400==i.j)var n=i(38331);if(3400==i.j)var r=i(35446);var a=i(87183);function l(e){let t,i,l,o,{effectiveSize:s,propOverride:c}=(0,n.i)(e),d=s?r.$Z[s]:e.iconSize,u=(0,r._C)([{size:16,svgContent:"<path d='M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288z'/>"},{size:24,svgContent:"<path d='m7.05 3.606 13.49 7.788a.7.7 0 0 1 0 1.212L7.05 20.394A.7.7 0 0 1 6 19.788V4.212a.7.7 0 0 1 1.05-.606'/>"}],d||24),h=e.autoMirror??!1;return a.createElement(r.In,{...e,...c,autoMirror:h,viewBox:`0 0 ${u.size} ${u.size}`,dangerouslySetInnerHTML:{__html:`${(t=e.title,i=e.titleId,t?`<title ${i?`id="${i}"`:""}>${t}</title>`:"")}${(l=e.desc,o=e.descId,l?`<desc ${o?`id="${o}"`:""}>${l}</
+
+# Also present: 24px variants (pause: "M5.7 3a..."; play: "m7.05 3.606...").
+#
+# Live DOM of [data-testid="control-button-playpause"] in an idle logged-out page (aria-label is LOCALIZED):
+#   aria-label="一時停止" (ja); svg first path d starts with "M2.7 1a.7.7 0 0 0-.7.7v12.6" => pause glyph.
+# English locale strings: playback-control.play = "Play", playback-control.pause = "Pause"
+#   (see 12-locale-strings.txt). Do not match literal English labels on non-English UIs; compare the svg path.
