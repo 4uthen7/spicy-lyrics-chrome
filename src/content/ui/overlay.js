@@ -27,7 +27,7 @@
 
   const HOST_ID = 'spicy-lyrics';
   const CSS_DIR = 'src/content/styles/';
-  const CSS_FILES = ['overlay.css', 'lyrics.css', 'controls.css'];
+  const CSS_FILES = ['overlay.css', 'lyrics.css', 'controls.css', 'background.css'];
   const TARGET_REFRESH_MS = 500;
   const FETCH_TIMEOUT_MS = 900;
 
@@ -333,7 +333,7 @@
     if (status === 'loading') {
       mode = 'loading';
       title = 'Finding lyrics';
-      sub = 'Matching this track against the Spicy Lyrics providers';
+      sub = 'Reading the lyrics Spotify already loaded for this track';
     } else if (status === 'empty') {
       mode = 'empty';
       title = 'No synced lyrics';
@@ -343,8 +343,8 @@
       title = 'Lyrics unavailable';
       sub = state.lyricsError || 'The lyrics provider request failed.';
     } else if (!track.title) {
-      title = 'Nothing playing';
-      sub = 'Play a track to see animated lyrics.';
+      title = 'Playback not detected';
+      sub = 'Play a track in Spotify. Still empty? Open the extension popup and copy diagnostics.';
     }
 
     const sig = [hasDoc ? 1 : 0, mode, title, sub].join('\u0001');
@@ -392,6 +392,9 @@
     }
 
     if (visible) view.tick(state, now);
+    // Background probe: starts/stops the page-video mirror and retries a
+    // missing custom image. Decorative drift itself is CSS on the compositor.
+    bg.tick(SL.store.positionNow(), !!(state.playback && state.playback.isPlaying));
   }
 
   // ---------------------------------------------------------------------------

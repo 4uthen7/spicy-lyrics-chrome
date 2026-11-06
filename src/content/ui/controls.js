@@ -25,8 +25,8 @@
 
   const TOGGLES = [
     { key: 'showBackground', label: 'Album art background' },
+    { key: 'backgroundMotion', label: 'Background motion' },
     { key: 'showInterludeDots', label: 'Interlude dots' },
-    { key: 'showRomanization', label: 'Romanization' },
     { key: 'minimalMode', label: 'Minimal chrome' },
     { key: 'reduceMotion', label: 'Reduce motion' },
   ];
@@ -181,6 +181,23 @@
       '</button>' +
       '</div>' +
       '<div class="sl-panel-body">' +
+      '<div class="sl-group"><div class="sl-group-title">Style</div>' +
+      '<div class="sl-seg-row"><span class="sl-toggle-label">Lyrics</span>' +
+      '<div class="sl-seg sl-seg-wide" role="group" aria-label="Lyric motion mode">' +
+      '<button type="button" data-seg-key="lyricMode" data-seg-value="cinema">Cinema</button>' +
+      '<button type="button" data-seg-key="lyricMode" data-seg-value="flow">Flow</button>' +
+      '<button type="button" data-seg-key="lyricMode" data-seg-value="simple">Simple</button>' +
+      '</div></div>' +
+      '<div class="sl-seg-row"><span class="sl-toggle-label">Background</span>' +
+      '<div class="sl-seg sl-seg-wide" role="group" aria-label="Background style">' +
+      '<button type="button" data-seg-key="backgroundStyle" data-seg-value="artwork">Art</button>' +
+      '<button type="button" data-seg-key="backgroundStyle" data-seg-value="artwork-sharp">Cover</button>' +
+      '<button type="button" data-seg-key="backgroundStyle" data-seg-value="gradient">Glow</button>' +
+      '<button type="button" data-seg-key="backgroundStyle" data-seg-value="solid">Flat</button>' +
+      '<button type="button" data-seg-key="backgroundStyle" data-seg-value="video">Video</button>' +
+      '<button type="button" data-seg-key="backgroundStyle" data-seg-value="image">Custom</button>' +
+      '</div></div>' +
+      '</div>' +
       '<div class="sl-group"><div class="sl-group-title">Highlight</div>' +
       '<div class="sl-seg-row"><span class="sl-toggle-label">Word fill</span>' +
       '<div class="sl-seg" role="group" aria-label="Word fill style">' +

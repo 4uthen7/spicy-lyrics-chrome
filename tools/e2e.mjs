@@ -57,6 +57,11 @@ const STATUS_JS = `(() => {
     mounted: d.spicyMounted || '',
     track: d.spicyTrack || '',
     lines: d.spicyLines || '',
+    detected: d.spicyDetected || '',
+    title: d.spicyTitle || '',
+    artist: d.spicyArtist || '',
+    lyricMode: d.spicyLyricMode || '',
+    bg: d.spicyBg || '',
   };
 })()`;
 
@@ -414,6 +419,116 @@ async function main() {
       return { lines: all.length, uniqueTokens: unique.length };
     })()`).catch(() => null);
     check('2026 DOM: native line list is scrapeable', nativeActive && nativeActive.lines > 5, nativeActive ? JSON.stringify(nativeActive) : 'n/a');
+
+    // ---------------------------------------------------------------------
+    // Phase 3: playback detection when the player bar carries no track testids
+    // (the failure users hit on the live site). MediaSession metadata is the
+    // only remaining source here.
+    // ---------------------------------------------------------------------
+    await cdp.send('Page.navigate', { url: `${server.url}/demo/index-real.html?no-dom-track=1` });
+    await waitFor(async () => (await cdp.eval(STATUS_JS)).version, { timeoutMs: 15000, description: 'no-dom-track content script' });
+    const mediaDetected = await waitFor(
+      async () => {
+        const s = await cdp.eval(STATUS_JS);
+        return s.detected === '1' && s.title ? s : null;
+      },
+      { timeoutMs: 15000, description: 'MediaSession metadata detection' },
+    ).catch(() => null);
+    check(
+      'detects playback from MediaSession when the player bar has no track testids',
+      !!mediaDetected && mediaDetected.title === 'Neon Paralysis',
+      mediaDetected ? JSON.stringify({ title: mediaDetected.title, artist: mediaDetected.artist, detected: mediaDetected.detected }) : 'timeout',
+    );
+    const mediaBoot = await waitFor(
+      async () => {
+        const s = await cdp.eval(STATUS_JS);
+        return s.status === 'ready' && s.mounted === '1' ? s : null;
+      },
+      { timeoutMs: 25000, description: 'bootstrap with MediaSession metadata' },
+    ).catch(() => null);
+    check('reads lyrics with MediaSession-only playback detection', !!mediaBoot, mediaBoot ? JSON.stringify({ sync: mediaBoot.sync, source: mediaBoot.source }) : 'timeout');
+    await wake(cdp);
+    await cdp.screenshot(join(SHOTS, 'e2e-media-session-only.png'));
+
+    // ---------------------------------------------------------------------
+    // Phase 4: lyric motion modes and background styles
+    // ---------------------------------------------------------------------
+    const popupUrl = extensionId ? `chrome-extension://${extensionId}/src/popup/popup.html` : null;
+    const setSettings = (partial) =>
+      cdp.eval(`new Promise(async (resolve) => {
+        const key = 'spicy.settings';
+        const got = await chrome.storage.sync.get(key);
+        const next = Object.assign({}, got[key] || {}, ${JSON.stringify(partial)});
+        await chrome.storage.sync.set({ [key]: next });
+        resolve(JSON.stringify(next));
+      })`);
+
+    async function openLighting(settings, query, screenshotName, expected) {
+      await cdp.send('Page.navigate', { url: popupUrl });
+      await sleep(700);
+      await setSettings(settings);
+      await cdp.send('Page.navigate', { url: `${server.url}/demo/index-real.html${query || ''}` });
+      await waitFor(async () => (await cdp.eval(STATUS_JS)).version, { timeoutMs: 15000, description: 'settings reload' });
+      const ready = await waitFor(
+        async () => {
+          const s = await cdp.eval(STATUS_JS);
+          return s.status === 'ready' && s.mounted === '1' ? s : null;
+        },
+        { timeoutMs: 25000, description: 'lyrics for ' + screenshotName },
+      ).catch(() => null);
+      const state = await cdp.eval(STATUS_JS);
+      const ok = !!ready && (!expected || Object.entries(expected).every(([key, value]) => state[key] === value));
+      await cdp.eval('window.__spicyDemo.seekTo(30500)');
+      await sleep(500);
+      await wake(cdp);
+      await cdp.screenshot(join(SHOTS, screenshotName));
+      return { ok, state };
+    }
+
+    if (popupUrl) {
+      const flow = await openLighting({ lyricMode: 'flow', backgroundStyle: 'video', backgroundMotion: true }, '', 'e2e-flow-video.png', { lyricMode: 'flow', bg: 'video' });
+      check('flow lyric mode + video background render', flow.ok, JSON.stringify({ mode: flow.state.lyricMode, bg: flow.state.bg, status: flow.state.status }));
+      const videoMirror = await cdp.eval("document.documentElement.dataset.spicyVideo || ''");
+      check('page video is mirrored into the background', videoMirror === 'mirror', 'spicyVideo=' + (videoMirror || 'unset'));
+
+      const simple = await openLighting({ lyricMode: 'simple', backgroundStyle: 'artwork-sharp' }, '', 'e2e-simple-cover.png', { lyricMode: 'simple', bg: 'artwork-sharp' });
+      check('simple lyric mode + cover background render', simple.ok, JSON.stringify({ mode: simple.state.lyricMode, bg: simple.state.bg, status: simple.state.status }));
+
+      // Diagnostics from the real popup, talking to the real content script.
+      const target = await (
+        await fetch(`http://127.0.0.1:${chrome.port}/json/new?${encodeURIComponent(`${server.url}/demo/index-real.html`)}`, { method: 'PUT' })
+      ).json();
+      const cdp2 = await Cdp.connect(target.webSocketDebuggerUrl);
+      try {
+        await cdp2.enable(['Runtime', 'Page']);
+        await waitFor(async () => cdp2.eval('!!window.__spicyDemo'), { timeoutMs: 15000, description: 'second demo tab' });
+        await cdp.send('Page.navigate', { url: popupUrl });
+        await sleep(1000);
+        const diag = await cdp.eval(`new Promise(async (resolve) => {
+          try {
+            const tabs = await chrome.tabs.query({});
+            const demo = tabs.find((t) => t.url && t.url.includes('/demo/'));
+            if (!demo) return resolve({ error: 'no demo tab', urls: tabs.map((t) => t.url) });
+            const res = await chrome.tabs.sendMessage(demo.id, { type: 'spicy:diagnostics' });
+            resolve(res);
+          } catch (err) {
+            resolve({ error: String(err && err.message || err) });
+          }
+        })`);
+        check(
+          'popup diagnostics report the real player state',
+          !!diag && !!diag.found && diag.found.playerBar === true && !!diag.mediaSession && diag.mediaSession.supported === true && !!diag.track && !!diag.track.title,
+          JSON.stringify({ playerBar: diag && diag.found && diag.found.playerBar, media: diag && diag.mediaSession && diag.mediaSession.supported, title: diag && diag.track && diag.track.title, error: diag && diag.error }),
+        );
+      } finally {
+        await cdp2.close().catch(() => {});
+        await fetch(`http://127.0.0.1:${chrome.port}/json/close/${target.id}`).catch(() => {});
+      }
+
+      await cdp.send('Page.navigate', { url: popupUrl });
+      await sleep(700);
+      await setSettings({ lyricMode: 'cinema', backgroundStyle: 'artwork', backgroundMotion: true });
+    }
 
     check('no uncaught page errors', pageErrors.length === 0, pageErrors.slice(0, 4).join(' | ').slice(0, 300));
 

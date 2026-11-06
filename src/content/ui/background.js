@@ -1,18 +1,33 @@
 /**
- * Spicy Lyrics for Chrome — dynamic album-art background.
+ * Spicy Lyrics for Chrome — album-art background engine.
  *
- * Renders the full-bleed scenery behind the lyrics:
- *   - a heavily blurred, slowly drifting copy of the album art
- *   - three huge, saturated colour blobs sampled from that art (palette)
- *   - a dimming scrim, a colour wash, a vignette and a light film grain
+ * Builds the full-bleed scenery behind the lyric column. The visual target is
+ * the Spicetify "Beautiful Lyrics" / "Spicy Lyrics" desktop look: album art
+ * that bleeds past the edges, heavy blur, slow Ken Burns drift, a palette wash
+ * and grain, plus an optional sharp cover panel with a mirrored reflection.
  *
- * Everything is transform/opacity/filter only; the drifting layers are driven
- * by CSS keyframes so the renderer's rAF loop never touches them. Track changes
- * crossfade by painting the inactive slot and flipping an `is-active` class.
+ * Styles (settings.backgroundStyle):
+ *   artwork        blurred full-bleed cover + drift + vignette + grain
+ *   artwork-sharp  that blur plus a sharp cover panel with a mirror reflection
+ *   gradient       palette radial blobs drifting on a dark base
+ *   solid          flat dark base tinted by the dominant palette colour
+ *   video          the page's own <video> mirrored through one canvas
+ *   image          chrome.storage.local['spicy.bgImage'] as the backdrop
  *
- * The public surface is `SL.background.create(stageEl)` which returns
- * `{ el, setTrack(track), setSettings(settings), destroy() }`. It is internal to
- * the overlay and not part of the documented extension API.
+ * Costs: the blurred cover, blobs and panel are static layers moved by CSS
+ * keyframes on the compositor. The only per-frame work here is the ~30fps video
+ * canvas (owned by video-bg.js) and a throttled probe that decides whether the
+ * page video is mirrorable. Nothing is re-created per frame and no layout is
+ * read inside a paint path.
+ *
+ * Public surface:
+ *   SL.background.create(stageEl) -> { el, setTrack(t), setSettings(s),
+ *                                      tick(positionMs, isPlaying),
+ *                                      destroy() }
+ *   SL.background.videoState() -> { found, playing, width, height,
+ *                                   mode: 'mirror'|'fallback' }
+ *
+ * The instance is internal to the overlay; overlay.js owns its lifecycle.
  */
 (function () {
   'use strict';
@@ -20,8 +35,14 @@
   if (SL.background) return;
   const util = SL.util;
 
-  const PALETTE_CACHE_MAX = 10;
+  const PALETTE_CACHE_MAX = 40;
+  /** url -> palette; Map order is used as a cheap LRU. */
   const paletteCache = new Map();
+  const STYLES = ['artwork', 'artwork-sharp', 'gradient', 'solid', 'video', 'image'];
+  const BG_IMAGE_KEY = (SL.store && SL.store.BG_IMAGE_KEY) || 'spicy.bgImage';
+  const EMPTY_VIDEO_STATE = { found: false, playing: false, width: 0, height: 0, mode: 'fallback' };
+
+  let observedVideoState = { ...EMPTY_VIDEO_STATE };
 
   // ---------------------------------------------------------------------------
   // Colour helpers
@@ -52,31 +73,28 @@
     const a = util.hexToRgb(from);
     const b = util.hexToRgb(to);
     if (!a || !b) return from;
-    return util.rgbToHex(
-      util.lerp(a.r, b.r, t),
-      util.lerp(a.g, b.g, t),
-      util.lerp(a.b, b.b, t)
-    );
+    return util.rgbToHex(util.lerp(a.r, b.r, t), util.lerp(a.g, b.g, t), util.lerp(a.b, b.b, t));
   }
 
-  /** Deterministic palette from a track id, used before/without artwork. */
+  /** Stable palette from a track id/title; used before/without artwork. */
   function seedPalette(seed) {
     const h = (hashStr(seed) % 3600) / 3600;
     return {
-      accent: hslHex(h, 0.6, 0.63),
-      accent2: hslHex(h + 0.085, 0.72, 0.52),
-      wash: hslHex(h + 0.02, 0.42, 0.3),
-      base: hslHex(h + 0.5, 0.32, 0.13),
+      accent: hslHex(h, 0.62, 0.62),
+      accent2: hslHex(h + 0.085, 0.74, 0.52),
+      wash: hslHex(h + 0.02, 0.44, 0.3),
+      base: hslHex(h + 0.5, 0.34, 0.12),
     };
   }
 
-  /** CSS-safe url() token for a background-image. */
+  const FALLBACK_PALETTE = seedPalette('spicy-lyrics');
+
   function cssUrl(url) {
     return 'url("' + String(url).replace(/["\\\n\r]/g, encodeURIComponent) + '")';
   }
 
   // ---------------------------------------------------------------------------
-  // Palette extraction (32x32 canvas, quantised buckets)
+  // Palette extraction: one 32x32 canvas, quantised HSL buckets, LRU cache
   // ---------------------------------------------------------------------------
 
   function paletteFromPixels(data) {
@@ -90,11 +108,9 @@
       const r = data[i];
       const g = data[i + 1];
       const b = data[i + 2];
-      const a = data[i + 3];
-      if (a < 180) continue;
+      if (data[i + 3] < 180) continue;
       const hsl = util.rgbToHsl(r, g, b);
-      // Skip almost-black pixels: they carry no useful hue for the wash.
-      if (hsl.l < 0.07) continue;
+      if (hsl.l < 0.06) continue;
       sumR += r;
       sumG += g;
       sumB += b;
@@ -128,23 +144,36 @@
     const accent = vibrant[0] || ranked[0] || { h: avg.h, s: 0.55, l: 0.6 };
     const accent2 =
       vibrant.find(
-        (c) =>
-          Math.abs(((c.h - accent.h + 1.5) % 1) - 0.5) > 0.055 && c.s > 0.12
+        (c) => Math.abs(((c.h - accent.h + 1.5) % 1) - 0.5) > 0.055 && c.s > 0.12
       ) ||
       vibrant[1] ||
       { h: accent.h + 0.09, s: accent.s, l: Math.max(0.28, accent.l - 0.1) };
 
     return {
-      accent: hslHex(accent.h, util.clamp(accent.s, 0.42, 0.82), util.clamp(accent.l, 0.5, 0.68)),
-      accent2: hslHex(accent2.h, util.clamp(accent2.s, 0.4, 0.85), util.clamp(accent2.l, 0.42, 0.6)),
-      wash: hslHex(avg.h, util.clamp(avg.s, 0.22, 0.6), util.clamp(avg.l * 0.7, 0.16, 0.36)),
-      base: hslHex(avg.h, 0.3, 0.11),
+      accent: hslHex(accent.h, util.clamp(accent.s, 0.44, 0.84), util.clamp(accent.l, 0.5, 0.68)),
+      accent2: hslHex(accent2.h, util.clamp(accent2.s, 0.4, 0.86), util.clamp(accent2.l, 0.42, 0.6)),
+      wash: hslHex(avg.h, util.clamp(avg.s, 0.22, 0.62), util.clamp(avg.l * 0.7, 0.16, 0.38)),
+      base: hslHex(avg.h, 0.32, 0.12),
     };
+  }
+
+  function cachePalette(url, palette) {
+    if (paletteCache.has(url)) paletteCache.delete(url);
+    while (paletteCache.size >= PALETTE_CACHE_MAX) {
+      paletteCache.delete(paletteCache.keys().next().value);
+    }
+    paletteCache.set(url, palette);
   }
 
   function extractPalette(url) {
     if (!url) return Promise.resolve(null);
-    if (paletteCache.has(url)) return Promise.resolve(paletteCache.get(url));
+    if (paletteCache.has(url)) {
+      const cached = paletteCache.get(url);
+      // Refresh LRU position.
+      paletteCache.delete(url);
+      paletteCache.set(url, cached);
+      return Promise.resolve(cached);
+    }
 
     return new Promise((resolve) => {
       let settled = false;
@@ -152,17 +181,11 @@
         if (settled) return;
         settled = true;
         clearTimeout(timer);
-        if (value) {
-          if (paletteCache.size >= PALETTE_CACHE_MAX) {
-            paletteCache.delete(paletteCache.keys().next().value);
-          }
-          paletteCache.set(url, value);
-        }
+        if (value) cachePalette(url, value);
         resolve(value);
       };
 
       const img = new Image();
-      // Works for data: URLs, fails gracefully (taint/CORS) for remote art.
       img.crossOrigin = 'anonymous';
       img.decoding = 'async';
       const timer = setTimeout(() => finish(null), 4000);
@@ -190,10 +213,9 @@
             size,
             size
           );
-          const data = ctx.getImageData(0, 0, size, size).data;
-          finish(paletteFromPixels(data));
+          finish(paletteFromPixels(ctx.getImageData(0, 0, size, size).data));
         } catch (err) {
-          // Tainted canvas / decode failure — caller falls back to the seed.
+          // Tainted by CORS: caller keeps the deterministic seed palette.
           finish(null);
         }
       };
@@ -203,140 +225,454 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Instance
+  // Layer tree
   // ---------------------------------------------------------------------------
 
-  const SLOT_HTML =
-    '<div class="sl-bg-cover"></div>' +
-    '<div class="sl-blob sl-blob-1"></div>' +
-    '<div class="sl-blob sl-blob-2"></div>' +
-    '<div class="sl-blob sl-blob-3"></div>';
-
-  const CHROME_HTML =
-    '<div class="sl-bg-scrim"></div>' +
-    '<div class="sl-bg-wash"></div>' +
-    '<div class="sl-bg-vignette"></div>' +
-    '<div class="sl-bg-grain"></div>';
-
-  const FALLBACK_PALETTE = seedPalette('spicy-lyrics');
+  const TEMPLATE =
+    '<div class="slbg-base"></div>' +
+    '<div class="slbg-art">' +
+    '<div class="slbg-art-slot" data-slot="a"><div class="slbg-art-cover"></div></div>' +
+    '<div class="slbg-art-slot" data-slot="b"><div class="slbg-art-cover"></div></div>' +
+    '</div>' +
+    '<div class="slbg-blobs">' +
+    '<div class="slbg-blob slbg-blob-1"></div>' +
+    '<div class="slbg-blob slbg-blob-2"></div>' +
+    '<div class="slbg-blob slbg-blob-3"></div>' +
+    '<div class="slbg-blob slbg-blob-4"></div>' +
+    '</div>' +
+    '<div class="slbg-video"></div>' +
+    '<div class="slbg-scrim"></div>' +
+    '<div class="slbg-wash"></div>' +
+    '<div class="slbg-glow"></div>' +
+    '<div class="slbg-vignette"></div>' +
+    '<div class="slbg-sharp">' +
+    '<div class="slbg-sharp-glow"></div>' +
+    '<div class="slbg-sharp-cover"></div>' +
+    '<div class="slbg-sharp-reflection"><div class="slbg-sharp-cover"></div></div>' +
+    '</div>' +
+    '<div class="slbg-lyric-scrim"></div>' +
+    '<div class="slbg-grain"></div>';
 
   function create(stageEl) {
-    const el = document.createElement('div');
-    el.className = 'sl-bg';
-    el.setAttribute('aria-hidden', 'true');
+    const root = document.createElement('div');
+    root.className = 'sl-bg slbg';
+    root.setAttribute('aria-hidden', 'true');
+    root.dataset.style = 'artwork';
+    root.innerHTML = TEMPLATE;
+    stageEl.prepend(root);
 
-    const slots = ['a', 'b'].map((id) => {
-      const slot = document.createElement('div');
-      slot.className = 'sl-bg-slot';
-      slot.dataset.slot = id;
-      slot.innerHTML = SLOT_HTML;
-      el.appendChild(slot);
-      return {
-        el: slot,
-        cover: slot.querySelector('.sl-bg-cover'),
-        blobs: Array.from(slot.querySelectorAll('.sl-blob')),
-      };
-    });
-    el.insertAdjacentHTML('beforeend', CHROME_HTML);
-    stageEl.prepend(el);
+    const artSlots = Array.from(root.querySelectorAll('.slbg-art-slot')).map((el) => ({
+      el,
+      cover: el.querySelector('.slbg-art-cover'),
+    }));
+    const blobs = Array.from(root.querySelectorAll('.slbg-blob'));
+    const videoHost = root.querySelector('.slbg-video');
+    const sharpEl = root.querySelector('.slbg-sharp');
+    const sharpGlow = root.querySelector('.slbg-sharp-glow');
+    const sharpCover = root.querySelector('.slbg-sharp-cover');
+    const sharpReflection = root.querySelector('.slbg-sharp-reflection .slbg-sharp-cover');
 
-    let active = 0;
-    let lastKey = null;
-    let lastSettingsSig = '';
     let destroyed = false;
+    let settings = {
+      showBackground: true,
+      backgroundStyle: 'artwork',
+      backgroundMotion: true,
+      backgroundBlur: 90,
+      backgroundDim: 0.48,
+      reduceMotion: false,
+    };
+    let requested = 'artwork';
+    let effective = 'artwork';
+    let track = null;
+    let lastTrackKey = null;
+    let palette = FALLBACK_PALETTE;
+    let paletteSource = null;
+    let bgImage = null;
+    let bgImageState = 'idle';
+    let bgImageTriedAt = 0;
+    let paintedArtUrl = null;
+    let activeSlot = 0;
+    let paintSeq = 0;
+    let mirror = null;
+    let lastVideoFlag = null;
+    let lastSettingsSig = '';
+    let lastTickAt = 0;
 
-    function applyPalette(palette) {
-      const target = stageEl.style;
-      target.setProperty('--sl-accent', palette.accent);
-      target.setProperty('--sl-accent-2', palette.accent2);
-      target.setProperty('--sl-accent-soft', withAlpha(palette.accent, 0.42));
-      target.setProperty('--sl-accent-faint', withAlpha(palette.accent, 0.16));
-      target.setProperty('--sl-base', palette.base);
-      target.setProperty('--sl-hl-2', mixHex(palette.accent, '#ffffff', 0.9));
-      el.style.setProperty('--sl-wash', withAlpha(palette.wash, 0.55));
+    // -------------------------------------------------------------------------
+    // Palette application
+    // -------------------------------------------------------------------------
+
+    function applyPalette(next) {
+      const stage = stageEl.style;
+      stage.setProperty('--sl-accent', next.accent);
+      stage.setProperty('--sl-accent-2', next.accent2);
+      stage.setProperty('--sl-accent-soft', withAlpha(next.accent, 0.42));
+      stage.setProperty('--sl-accent-faint', withAlpha(next.accent, 0.16));
+      stage.setProperty('--sl-base', next.base);
+      stage.setProperty('--sl-hl-2', mixHex(next.accent, '#ffffff', 0.9));
+      stage.setProperty('--sl-wash', withAlpha(next.wash, 0.55));
+
+      const body = root.style;
+      body.setProperty('--slbg-wash', withAlpha(next.wash, 0.55));
+      body.setProperty('--slbg-glow', withAlpha(next.accent, 0.34));
+      body.setProperty('--slbg-glow-2', withAlpha(next.accent2, 0.22));
+      body.setProperty('--slbg-tint', withAlpha(next.wash, 0.72));
+      body.setProperty('--slbg-base', next.base);
+      const colors = [
+        next.accent,
+        next.accent2,
+        mixHex(next.accent, next.accent2, 0.5),
+        mixHex(next.accent, next.base, 0.45),
+      ];
+      blobs.forEach((blob, i) => blob.style.setProperty('--c', colors[i % colors.length]));
     }
 
-    function paintSlot(slot, track, palette) {
-      const hasArt = !!(track && track.coverUrl);
-      if (hasArt) {
-        slot.cover.style.backgroundImage = cssUrl(track.coverUrl);
-        slot.el.classList.add('has-art');
+    function currentTrackSeed() {
+      const seed = track && (track.id || track.uri || track.title || track.artist);
+      return seedPalette(seed || 'spicy-lyrics');
+    }
+
+    function updatePaletteSource() {
+      const source =
+        requested === 'image' && bgImage
+          ? bgImage
+          : (track && track.coverUrl) || '';
+      if (source === paletteSource) return;
+      paletteSource = source;
+      const seed = currentTrackSeed();
+      palette = seed;
+      applyPalette(seed);
+      if (!source) return;
+      extractPalette(source).then((extracted) => {
+        if (destroyed || paletteSource !== source || !extracted) return;
+        palette = extracted;
+        applyPalette(extracted);
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // Artwork layers + crossfade
+    // -------------------------------------------------------------------------
+
+    function paintArt(url) {
+      if (url === paintedArtUrl) return;
+      const first = paintedArtUrl === null;
+      paintedArtUrl = url || '';
+
+      const image = url ? cssUrl(url) : 'none';
+      if (first) {
+        const slot = artSlots[activeSlot];
+        slot.cover.style.backgroundImage = image;
+        slot.el.classList.toggle('has-art', !!url);
+        slot.el.classList.add('is-active');
       } else {
-        slot.cover.style.backgroundImage = 'none';
-        slot.el.classList.remove('has-art');
+        const nextIndex = 1 - activeSlot;
+        const next = artSlots[nextIndex];
+        const prev = artSlots[activeSlot];
+        next.cover.style.backgroundImage = image;
+        next.el.classList.toggle('has-art', !!url);
+        // Start hidden so the opacity transition actually runs.
+        next.el.classList.remove('is-active');
+        const token = ++paintSeq;
+        requestAnimationFrame(() => {
+          if (destroyed || token !== paintSeq) return;
+          next.el.classList.add('is-active');
+          prev.el.classList.remove('is-active');
+        });
+        activeSlot = nextIndex;
       }
-      const colors = [palette.accent, palette.accent2, palette.wash];
-      slot.blobs.forEach((blob, i) => {
-        blob.style.setProperty('--b', colors[i % colors.length]);
-      });
-      // Restart the drift so a fresh track does not pop mid-cycle.
-      void slot.el.offsetWidth;
+
+      sharpGlow.style.backgroundImage = image;
+      sharpCover.style.backgroundImage = image;
+      sharpReflection.style.backgroundImage = image;
+      sharpEl.classList.toggle('has-art', !!url);
     }
 
-    function setTrack(track) {
+    function desiredArtUrl() {
+      if (!settings.showBackground) return '';
+      if (effective === 'image') return bgImage || '';
+      if (effective === 'gradient' || effective === 'solid') return '';
+      return (track && track.coverUrl) || '';
+    }
+
+    function refreshArt() {
+      const url = desiredArtUrl();
+      if (url === paintedArtUrl) return;
+      paintArt(url);
+    }
+
+    // -------------------------------------------------------------------------
+    // Background image (custom upload)
+    // -------------------------------------------------------------------------
+
+    function readBgImage() {
+      bgImageTriedAt = performance.now();
+      bgImageState = 'loading';
+      let storage = null;
+      try {
+        storage = globalThis.chrome && chrome.storage && chrome.storage.local;
+      } catch (err) {
+        storage = null;
+      }
+      if (!storage || typeof storage.get !== 'function') {
+        bgImageState = 'missing';
+        applyStyle();
+        return;
+      }
+      let pending;
+      try {
+        pending = storage.get(BG_IMAGE_KEY);
+      } catch (err) {
+        bgImageState = 'missing';
+        applyStyle();
+        return;
+      }
+      Promise.resolve(pending)
+        .then((got) => {
+          if (destroyed) return;
+          const value = got && got[BG_IMAGE_KEY];
+          bgImageState = typeof value === 'string' && value ? 'ready' : 'missing';
+          if (bgImageState === 'ready') bgImage = value;
+          if (requested === 'image') applyStyle();
+        })
+        .catch(() => {
+          if (destroyed) return;
+          bgImageState = 'missing';
+          if (requested === 'image') applyStyle();
+        });
+    }
+
+    function onStorageChanged(changes, area) {
+      if (destroyed || area !== 'local' || !changes || !changes[BG_IMAGE_KEY]) return;
+      const value = changes[BG_IMAGE_KEY].newValue;
+      bgImage = typeof value === 'string' && value ? value : null;
+      bgImageState = bgImage ? 'ready' : 'missing';
+      if (requested === 'image') applyStyle();
+    }
+
+    let storageListenerAttached = false;
+    try {
+      if (chrome && chrome.storage && chrome.storage.onChanged && chrome.storage.onChanged.addListener) {
+        chrome.storage.onChanged.addListener(onStorageChanged);
+        storageListenerAttached = true;
+      }
+    } catch (err) {
+      storageListenerAttached = false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Video mirror
+    // -------------------------------------------------------------------------
+
+    function writeVideoFlag(value) {
+      if (value === lastVideoFlag) return;
+      lastVideoFlag = value;
+      try {
+        document.documentElement.dataset.spicyVideo = value;
+      } catch (err) {
+        /* detached document */
+      }
+    }
+
+    function onVideoState(next) {
+      observedVideoState = next;
+      const live = next.mode === 'mirror' && effective === 'video' && settings.showBackground;
+      root.classList.toggle('is-video-live', live);
+      writeVideoFlag(live ? 'mirror' : effective === 'video' ? 'fallback' : '');
+    }
+
+    function ensureMirror() {
+      if (mirror || destroyed) return mirror;
+      if (!SL.videoBg || typeof SL.videoBg.create !== 'function') return null;
+      try {
+        mirror = SL.videoBg.create(videoHost, { onState: onVideoState });
+      } catch (err) {
+        console.error('[spicy] video background unavailable', err);
+        mirror = null;
+      }
+      return mirror;
+    }
+
+    function updateVideoMode(visible) {
+      if (requested === 'video') ensureMirror();
+      if (!mirror) {
+        if (effective === 'video') onVideoState(EMPTY_VIDEO_STATE);
+        return;
+      }
+      const active = requested === 'video' && settings.showBackground && visible;
+      mirror.setActive(active);
+      const mirroring = active && observedVideoState.mode === 'mirror';
+      writeVideoFlag(effective === 'video' ? (mirroring ? 'mirror' : 'fallback') : '');
+    }
+
+    function stageIsVisible() {
+      return stageEl.dataset.open === '1' && stageEl.dataset.waiting !== '1';
+    }
+
+    // -------------------------------------------------------------------------
+    // Style resolution
+    // -------------------------------------------------------------------------
+
+    function applyStyle() {
       if (destroyed) return;
-      const key = track ? track.coverUrl || track.id || track.title || '' : '';
-      if (key === lastKey) return;
-      lastKey = key;
+      if (!settings.showBackground) {
+        effective = requested === 'image' && !bgImage ? 'artwork' : requested;
+        root.dataset.style = effective;
+        stageEl.dataset.bgstyle = effective;
+        root.classList.add('is-bg-off');
+        sharpEl.classList.remove('is-on');
+        refreshArt();
+        updateVideoMode(false);
+        writeVideoFlag('');
+        return;
+      }
 
-      const seed = seedPalette(
-        track && (track.id || track.uri || track.title || track.artist) || 'spicy-lyrics'
-      );
-      const hasArt = !!(track && track.coverUrl);
-      applyPalette(hasArt ? seed : FALLBACK_PALETTE);
-
-      const next = slots[1 - active];
-      paintSlot(next, track, seed);
-      requestAnimationFrame(() => {
-        if (destroyed) return;
-        next.el.classList.add('is-active');
-        slots[active].el.classList.remove('is-active');
-        active = 1 - active;
-        if (hasArt && track.coverUrl) {
-          const requestKey = key;
-          const slot = next;
-          extractPalette(track.coverUrl).then((palette) => {
-            if (destroyed || lastKey !== requestKey || !palette) return;
-            applyPalette(palette);
-            paintSlot(slot, track, palette);
-          });
-        }
-      });
+      effective = requested === 'image' && !bgImage ? 'artwork' : requested;
+      root.dataset.style = effective;
+      stageEl.dataset.bgstyle = effective;
+      root.classList.remove('is-bg-off');
+      sharpEl.classList.toggle('is-on', effective === 'artwork-sharp');
+      // First time only; a missing image is retried from tick() on a slow
+      // timer so an empty storage key cannot spin read -> applyStyle -> read.
+      if (requested === 'image' && !bgImage && bgImageState === 'idle') readBgImage();
+      updatePaletteSource();
+      refreshArt();
+      updateVideoMode(stageIsVisible());
     }
 
-    function setSettings(settings) {
-      if (destroyed || !settings) return;
+    // -------------------------------------------------------------------------
+    // Public instance API
+    // -------------------------------------------------------------------------
+
+    function setTrack(nextTrack) {
+      if (destroyed || !nextTrack) return;
+      const key = [nextTrack.id || nextTrack.uri || '', nextTrack.coverUrl || ''].join('|');
+      if (key === lastTrackKey) return;
+      lastTrackKey = key;
+      track = nextTrack;
+      updatePaletteSource();
+      refreshArt();
+    }
+
+    function setSettings(next) {
+      if (destroyed || !next) return;
       const sig = [
-        settings.showBackground ? 1 : 0,
-        settings.backgroundBlur,
-        settings.backgroundDim,
-        settings.reduceMotion ? 1 : 0,
+        next.showBackground ? 1 : 0,
+        next.backgroundStyle,
+        next.backgroundMotion ? 1 : 0,
+        Number(next.backgroundBlur),
+        Number(next.backgroundDim),
+        next.reduceMotion ? 1 : 0,
       ].join('|');
       if (sig === lastSettingsSig) return;
       lastSettingsSig = sig;
+
+      settings = {
+        showBackground: next.showBackground !== false,
+        backgroundStyle: STYLES.includes(next.backgroundStyle) ? next.backgroundStyle : 'artwork',
+        backgroundMotion: next.backgroundMotion !== false,
+        backgroundBlur: Number(next.backgroundBlur) || 0,
+        backgroundDim: Number(next.backgroundDim) || 0,
+        reduceMotion: !!next.reduceMotion,
+      };
+      requested = settings.backgroundStyle;
+
       const blurPx = 4 + util.clamp(settings.backgroundBlur, 0, 200) * 0.92;
-      el.style.setProperty('--sl-bg-blur', blurPx.toFixed(1) + 'px');
-      // Map the stored 0..0.95 dim to a slightly gentler scrim so the default
-      // (0.62) keeps the artwork's colour instead of flattening it to grey.
-      el.style.setProperty(
-        '--sl-bg-dim',
-        String(util.clamp(settings.backgroundDim, 0, 0.95) * 0.72)
+      const dimValue = util.clamp(settings.backgroundDim, 0, 0.95) * 0.72;
+      root.style.setProperty('--slbg-blur', blurPx.toFixed(1) + 'px');
+      root.style.setProperty('--slbg-dim', dimValue.toFixed(3));
+      // Video keeps much more definition than artwork: the moving frames are
+      // the point, so only a light blur is applied.
+      root.style.setProperty(
+        '--slbg-video-blur',
+        util.clamp(3 + settings.backgroundBlur * 0.1, 2, 24).toFixed(0) + 'px'
       );
-      el.classList.toggle('is-background-off', !settings.showBackground);
-      el.classList.toggle('is-motion-off', !!settings.reduceMotion);
+      const motion = settings.backgroundMotion && !settings.reduceMotion;
+      root.classList.toggle('is-motion-off', !motion);
+
+      applyStyle();
+    }
+
+    /**
+     * Cheap probe driven by the overlay's frame loop: decides whether the page
+     * video is worth mirroring. The video canvas draws itself from rVFC; this
+     * only starts/stops it and retries a missing custom image.
+     */
+    function tick(positionMs, isPlaying) {
+      if (destroyed) return;
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      if (now - lastTickAt < 250) return;
+      lastTickAt = now;
+      const visible = stageIsVisible();
+      if (requested === 'video') updateVideoMode(visible);
+      else if (mirror) mirror.setActive(false);
+      if (
+        requested === 'image' &&
+        !bgImage &&
+        bgImageState !== 'loading' &&
+        now - bgImageTriedAt > 2000
+      ) {
+        readBgImage();
+      }
     }
 
     function destroy() {
+      if (destroyed) return;
       destroyed = true;
-      el.remove();
+      if (mirror) {
+        try {
+          mirror.destroy();
+        } catch (err) {
+          /* ignore */
+        }
+        mirror = null;
+      }
+      if (storageListenerAttached) {
+        try {
+          chrome.storage.onChanged.removeListener(onStorageChanged);
+        } catch (err) {
+          /* ignore */
+        }
+        storageListenerAttached = false;
+      }
+      writeVideoFlag('');
+      observedVideoState = { ...EMPTY_VIDEO_STATE };
+      root.remove();
     }
 
-    // Start with a stable dark wash so the first painted frame already has depth.
-    applyPalette(FALLBACK_PALETTE);
-    slots[0].el.classList.add('is-active');
+    // -------------------------------------------------------------------------
+    // Boot: paint the dark base immediately, then adopt current store state.
+    // -------------------------------------------------------------------------
 
-    return { el, setTrack, setSettings, destroy };
+    applyPalette(FALLBACK_PALETTE);
+    root.dataset.style = 'artwork';
+    stageEl.dataset.bgstyle = 'artwork';
+
+    let initial = null;
+    try {
+      initial = SL.store && typeof SL.store.get === 'function' ? SL.store.get() : null;
+    } catch (err) {
+      initial = null;
+    }
+    if (initial) {
+      if (initial.settings) setSettings(initial.settings);
+      if (initial.track) setTrack(initial.track);
+    }
+    if (requested === 'image' && bgImageState === 'idle') readBgImage();
+    writeVideoFlag(requested === 'video' ? 'fallback' : '');
+
+    return {
+      el: root,
+      setTrack,
+      setSettings,
+      tick,
+      destroy,
+    };
   }
 
-  SL.background = { create };
+  SL.background = {
+    create,
+    videoState: () => ({ ...observedVideoState }),
+    STYLES,
+  };
 })();

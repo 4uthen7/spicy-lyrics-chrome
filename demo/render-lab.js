@@ -13,6 +13,11 @@
  *   ?dim=0.62&blur=90        background tuning
  *   ?fs=1&gap=1              type tuning
  *   ?hl=gradient|solid       word highlight mode
+ *   ?lyric_mode=cinema|flow|simple  lyric motion model
+ *   ?bg=artwork|artwork-sharp|gradient|solid|video|image   background style
+ *   ?bgmotion=0              disable background drift (backgroundMotion:false)
+ *   ?solo=1                  collapse the fake shell to the panel-mode column
+ *   ?debug=1                 show a background/video state readout
  *   ?pause=1                 render the paused/breathing state
  *
  * No network, no build step, no dependencies. The artwork is generated into a
@@ -28,7 +33,14 @@
   const FULL = Q.get('full') === '1';
   const PAUSED = Q.get('pause') === '1';
   const ALIGN = Q.get('align') || 'center';
+  const BG = (Q.get('bg') || 'artwork').toLowerCase();
+  const SOLO = Q.get('solo') === '1';
+  const DEBUG = Q.get('debug') === '1';
+  const BARE = Q.get('bare') === '1';
+  const BG_STYLES = ['artwork', 'artwork-sharp', 'gradient', 'solid', 'video', 'image'];
+  const BG_STYLE = BG_STYLES.includes(BG) ? BG : 'artwork';
   const num = (key, fallback) => (Q.has(key) ? Number(Q.get(key)) : fallback);
+  const fixtureUrl = (name) => new URL('./fixtures/' + name, location.href).href;
 
   // ---------------------------------------------------------------------------
   // Error surface: a render-lab bug should be visible in a screenshot.
@@ -55,10 +67,72 @@
     id: 'render-lab',
     getURL: (path) => new URL('../' + path, location.href).href,
   };
+  // In-memory chrome.storage.local so the 'image' style can be exercised the
+  // same way the popup writes chrome.storage.local['spicy.bgImage'].
+  const labLocal = {
+    /** @type {Record<string, unknown>} */
+    data: Object.create(null),
+    /** @type {Set<Function>} */
+    listeners: new Set(),
+  };
+  function labLocalChanged(changes) {
+    for (const fn of labLocal.listeners) {
+      try {
+        fn(changes, 'local');
+      } catch (err) {
+        console.error('[lab] storage listener failed', err);
+      }
+    }
+  }
+  window.__labStorage = labLocal;
   window.chrome.storage = {
-    sync: { get: async () => ({}), set: async () => {} },
-    local: { get: async () => ({}), set: async () => {}, remove: async () => {} },
-    onChanged: { addListener() {} },
+    sync: {
+      get: async (keys) => {
+        const out = {};
+        if (typeof keys === 'string') out[keys] = labLocal.data[keys];
+        return out;
+      },
+      set: async () => {},
+    },
+    local: {
+      get: async (keys) => {
+        const out = {};
+        if (typeof keys === 'string') out[keys] = labLocal.data[keys];
+        else if (Array.isArray(keys)) keys.forEach((k) => (out[k] = labLocal.data[k]));
+        else if (keys && typeof keys === 'object') {
+          for (const k of Object.keys(keys)) out[k] = labLocal.data[k] ?? keys[k];
+        } else {
+          Object.assign(out, labLocal.data);
+        }
+        return out;
+      },
+      set: async (entries) => {
+        if (!entries || typeof entries !== 'object') return;
+        const changes = {};
+        for (const key of Object.keys(entries)) {
+          changes[key] = { oldValue: labLocal.data[key], newValue: entries[key] };
+          labLocal.data[key] = entries[key];
+        }
+        labLocalChanged(changes);
+      },
+      remove: async (keys) => {
+        const list = Array.isArray(keys) ? keys : [keys];
+        const changes = {};
+        for (const key of list) {
+          changes[key] = { oldValue: labLocal.data[key], newValue: undefined };
+          delete labLocal.data[key];
+        }
+        labLocalChanged(changes);
+      },
+    },
+    onChanged: {
+      addListener(fn) {
+        if (typeof fn === 'function') labLocal.listeners.add(fn);
+      },
+      removeListener(fn) {
+        labLocal.listeners.delete(fn);
+      },
+    },
   };
 
   const SL = globalThis.SL;
@@ -149,13 +223,21 @@
   const artA = makeArt({ base: '#1a0a12', colors: ['#ff2d6f', '#ff8a3d', '#7b1fa2'], seed: 7 });
   const artB = makeArt({ base: '#07121a', colors: ['#2fe0c8', '#3d7bff', '#b36bff'], seed: 19 });
 
+  // Palette extraction and the artwork layer read real files here. Headless
+  // Chrome needs --allow-file-access-from-files for the canvas pixel read;
+  // without it the engine falls back to its stable hash palette (still fine).
+  const COVER_A = fixtureUrl('cover-3.png');
+  const COVER_B = fixtureUrl('cover-1.png');
+  const CUSTOM_IMAGE = fixtureUrl('cover-2.png');
+  const VIDEO_CLIP = fixtureUrl('canvas-loop.mp4');
+
   const TRACK_A = {
     id: 'render-lab-wide-home',
     uri: 'spotify:track:render-lab-wide-home',
     title: 'Wide Home',
     artist: 'Wren Adeline',
     album: 'Cinema Static',
-    coverUrl: artA,
+    coverUrl: Q.get('cover') === '1' ? COVER_B : COVER_A,
     durationMs: 212000,
     trackUrl: null,
   };
@@ -165,7 +247,7 @@
     title: 'Glass Hours',
     artist: 'Sable Hour',
     album: 'Night Arithmetic',
-    coverUrl: artB,
+    coverUrl: COVER_B,
     durationMs: 164000,
     trackUrl: null,
   };
@@ -375,6 +457,8 @@
     ...defaults,
     showHeader: true,
     showBackground: true,
+    backgroundStyle: BG_STYLE,
+    backgroundMotion: Q.get('bgmotion') !== '0',
     backgroundDim: num('dim', 0.48),
     backgroundBlur: num('blur', 92),
     fontSize: num('fs', 1),
@@ -382,6 +466,10 @@
     wordHighlight: Q.get('hl') === 'solid' ? 'solid' : 'gradient',
     showInterludeDots: Q.get('dots') !== '0',
     reduceMotion: Q.get('motion') === '0',
+    lyricMode: (() => {
+      const value = (Q.get('lyric_mode') || Q.get('lyricMode') || '').toLowerCase();
+      return value === 'flow' || value === 'simple' ? value : 'cinema';
+    })(),
   });
 
   paintShell(fixture.track);
@@ -390,6 +478,144 @@
   if (Q.get('empty') === '1') SL.store.setLyricsStatus('empty');
   else if (Q.get('loading') === '1') SL.store.setLyricsStatus('loading');
   else SL.store.setLyrics(fixture.doc, 'ready');
+
+  // ---------------------------------------------------------------------------
+  // Lab environment for the background styles
+  // ---------------------------------------------------------------------------
+
+  if (SOLO) document.body.classList.add('lab-solo-panel');
+
+  // ?bare=1 hides the lyric/idle/control layers so a screenshot shows the
+  // background alone (used for contrast measurements and background review).
+  function hideOverlayContent() {
+    const host = document.getElementById('spicy-lyrics');
+    const root = host && host.shadowRoot;
+    if (!root) {
+      window.setTimeout(hideOverlayContent, 40);
+      return;
+    }
+    const style = document.createElement('style');
+    style.setAttribute('data-lab', 'bare');
+    style.textContent =
+      '.sl-lyrics,.sl-idle,.sl-header,.sl-status,.sl-panel{visibility:hidden !important;}';
+    root.appendChild(style);
+  }
+  if (BARE) hideOverlayContent();
+
+  // A real page <video> for ?bg=video: the engine mirrors whatever visible
+  // <video> the page has, exactly like Spotify's music-video element. The clip
+  // is the Lead's generated fixture; if it cannot autoplay in this run we fall
+  // back to a canvas captureStream, which still yields a real HTMLVideoElement.
+  function installPageVideo() {
+    const video = document.createElement('video');
+    video.className = 'lab-page-video';
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('aria-hidden', 'true');
+    video.src = VIDEO_CLIP;
+    document.body.insertBefore(video, document.body.firstChild);
+    const canvasFallback = () => {
+      if (video.dataset.labFallback === '1') return;
+      video.dataset.labFallback = '1';
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 360;
+      const ctx = canvas.getContext('2d');
+      const draw = () => {
+        const t = performance.now() / 1000;
+        const grad = ctx.createLinearGradient(0, 0, 640, 360);
+        grad.addColorStop(0, 'hsl(' + ((t * 24) % 360) + ', 80%, 34%)');
+        grad.addColorStop(0.55, 'hsl(' + ((t * 24 + 120) % 360) + ', 72%, 22%)');
+        grad.addColorStop(1, 'hsl(' + ((t * 24 + 240) % 360) + ', 82%, 40%)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 640, 360);
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(320 + Math.sin(t) * 160, 180 + Math.cos(t * 1.3) * 90, 90, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        requestAnimationFrame(draw);
+      };
+      draw();
+      try {
+        video.srcObject = canvas.captureStream(30);
+        video.play().catch(() => {});
+      } catch (err) {
+        showError('Page video fallback failed: ' + err);
+      }
+    };
+    video.addEventListener('playing', () => {
+      window.__labVideoPlaying = true;
+    });
+    video.addEventListener('error', canvasFallback);
+    window.setTimeout(() => {
+      if (!window.__labVideoPlaying) canvasFallback();
+    }, 1500);
+    const attempt = video.play();
+    if (attempt && typeof attempt.catch === 'function') attempt.catch(() => canvasFallback());
+    return video;
+  }
+
+  function prepareCustomImage() {
+    labLocal.data['spicy.bgImage'] = CUSTOM_IMAGE;
+  }
+
+  if (BG_STYLE === 'video') installPageVideo();
+  if (BG_STYLE === 'image') prepareCustomImage();
+
+  // ?debug=1: light-DOM readout of the effective background + video mirror.
+  if (DEBUG) {
+    const box = document.getElementById('lab-debug');
+    if (box) {
+      box.classList.add('is-on');
+      window.setInterval(() => {
+        const host = document.getElementById('spicy-lyrics');
+        const root = host && host.shadowRoot;
+        const bgRoot = root && root.querySelector('.sl-bg');
+        const stage = root && root.querySelector('.sl-stage');
+        const state = (SL.background.videoState && SL.background.videoState()) || {};
+        const accent = stage ? getComputedStyle(stage).getPropertyValue('--sl-accent').trim() : '';
+        const pv = document.querySelector('.lab-page-video');
+        let pvText = 'none';
+        if (pv) {
+          const r = pv.getBoundingClientRect();
+          pvText = [
+            'paused=' + pv.paused,
+            'rs=' + pv.readyState,
+            'dim=' + pv.videoWidth + 'x' + pv.videoHeight,
+            'rect=' + Math.round(r.width) + 'x' + Math.round(r.height),
+            'errcode=' + (pv.error ? pv.error.code : 0),
+            'src=' + (pv.currentSrc || pv.src || '').split('/').pop(),
+          ].join(' ');
+        }
+        const diag = bgRoot
+          ? ' ticks=' + (bgRoot.dataset.ticks || '0') +
+            ' visible=' + (bgRoot.dataset.visible || '-') +
+            ' mirror=' + (bgRoot.dataset.mirror || '-') +
+            ' vActive=' + (bgRoot.dataset.videoActive || '-')
+          : '';
+        const stageRect = stage ? stage.getBoundingClientRect() : null;
+        const stackEl = root && root.querySelector('.sl-stack');
+        box.textContent =
+          'bg=' + BG_STYLE +
+          '  applied=' + ((bgRoot && bgRoot.dataset.style) || '-') +
+          '  accent=' + (accent || '-') +
+          '\nvideo found=' + !!state.found +
+          ' playing=' + !!state.playing +
+          ' mode=' + (state.mode || '-') +
+          ' ' + (state.width || 0) + 'x' + (state.height || 0) +
+          '\ndataset.spicyVideo=' + (document.documentElement.dataset.spicyVideo || '""') +
+          '\npageVideo: ' + pvText +
+          '\nstage=' + (stageRect ? Math.round(stageRect.width) + 'x' + Math.round(stageRect.height) + '@' + Math.round(stageRect.left) : '-') +
+          ' stack=' + ((stackEl && stackEl.className) || '-') +
+          ' col=' + ((root && root.querySelector('.sl-column') && Math.round(root.querySelector('.sl-column').clientWidth)) || '-') +
+          ' fs=' + (stage ? getComputedStyle(stage).getPropertyValue('--sl-fs').trim() : '-');
+      }, 250);
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // Mount
@@ -461,8 +687,11 @@
   window.__lab = {
     mode: MODE,
     fixedT: FIXED_T,
+    bg: BG_STYLE,
     store: SL.store,
     overlay: SL.overlay,
     SL,
+    background: SL.background,
+    videoState: () => (SL.background.videoState ? SL.background.videoState() : null),
   };
 })();

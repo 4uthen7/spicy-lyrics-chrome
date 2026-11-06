@@ -1,0 +1,525 @@
+/*
+ * Spicy Lyrics for Chrome — background scenery.
+ *
+ * Six backdrop styles, all driven by the album art palette:
+ *   artwork        full-bleed blurred cover, Ken Burns drift, vignette + grain
+ *   artwork-sharp  the same blur plus a sharp cover panel with a mirrored
+ *                  reflection, feathered edges and a halo
+ *   gradient       3-4 huge radial palette blobs drifting on a dark base
+ *   solid          flat dark base tinted by the dominant palette colour
+ *   video          the page's own <video> mirrored into one canvas
+ *   image          a user image (chrome.storage.local 'spicy.bgImage')
+ *
+ * Everything here animates transform / opacity / filter only. The drifting
+ * layers are CSS keyframes on the compositor; background.js writes nothing per
+ * frame except the video canvas (one canvas, rVFC driven, ~30fps).
+ *
+ * The lyric scrim is intentionally independent of settings.backgroundDim: the
+ * dim slider controls the scenery, the scrim guarantees the active white lyric
+ * keeps >= 4.5:1 contrast over the art in every style.
+ */
+
+.sl-bg.slbg {
+  --slbg-blur: 86px;
+  --slbg-dim: 0.45;
+  --slbg-video-blur: 34px;
+  --slbg-blob-o: 0.62;
+  contain: layout paint style;
+  isolation: isolate;
+  background: #06060a;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Base tint                                                                  */
+/* ------------------------------------------------------------------------- */
+
+.slbg-base {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #06060a;
+}
+
+.slbg-base::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(110% 85% at 50% 12%, var(--slbg-tint, rgba(56, 24, 40, 0.55)) 0%, transparent 62%),
+    radial-gradient(120% 100% at 50% 108%, rgba(3, 3, 7, 0.85) 0%, transparent 58%);
+  opacity: 0.9;
+}
+
+.sl-bg[data-style="gradient"] .slbg-base {
+  background:
+    radial-gradient(120% 95% at 50% 22%, #191426 0%, #0b0912 54%, #050508 100%);
+}
+
+.sl-bg[data-style="gradient"] .slbg-base::after {
+  opacity: 0.55;
+}
+
+.sl-bg[data-style="solid"] .slbg-base {
+  background:
+    radial-gradient(130% 105% at 50% 8%, var(--slbg-tint, rgba(70, 28, 44, 0.6)) 0%, transparent 66%),
+    linear-gradient(180deg, var(--slbg-base, #0c0a10) 0%, #06060a 100%);
+}
+
+.sl-bg[data-style="solid"] .slbg-base::after {
+  opacity: 0.35;
+}
+
+/* Background off: near-black flat base, no art, no blur work. */
+.sl-bg.is-bg-off {
+  background: #050508;
+}
+
+.sl-bg.is-bg-off .slbg-art,
+.sl-bg.is-bg-off .slbg-blobs,
+.sl-bg.is-bg-off .slbg-video,
+.sl-bg.is-bg-off .slbg-sharp,
+.sl-bg.is-bg-off .slbg-wash,
+.sl-bg.is-bg-off .slbg-grain {
+  display: none;
+}
+
+.sl-bg.is-bg-off .slbg-base {
+  background: #050508;
+}
+
+.sl-bg.is-bg-off .slbg-base::after {
+  opacity: 0.35;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Artwork: crossfading, heavily blurred full-bleed covers                    */
+/* ------------------------------------------------------------------------- */
+
+.slbg-art {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.55s ease;
+}
+
+.sl-bg[data-style="artwork"] .slbg-art,
+.sl-bg[data-style="artwork-sharp"] .slbg-art,
+.sl-bg[data-style="video"] .slbg-art,
+.sl-bg[data-style="image"] .slbg-art {
+  opacity: 1;
+}
+
+.slbg-art-slot {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.8s var(--sl-ease, ease);
+  will-change: opacity;
+}
+
+.slbg-art-slot.is-active {
+  opacity: 1;
+}
+
+.slbg-art-cover {
+  position: absolute;
+  inset: -14%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(var(--slbg-blur, 86px)) saturate(1.72) brightness(1.06);
+  transform: translate3d(0, 0, 0) scale(1.12);
+  will-change: transform;
+  animation: slbg-kenburns 76s ease-in-out infinite alternate;
+}
+
+/* A second, slower and slightly cooler copy adds depth to flat covers. */
+.slbg-art-slot[data-slot="b"] .slbg-art-cover {
+  animation-duration: 91s;
+  animation-direction: alternate-reverse;
+}
+
+.slbg-art-slot:not(.has-art) .slbg-art-cover {
+  opacity: 0;
+}
+
+@keyframes slbg-kenburns {
+  from {
+    transform: translate3d(-1.5%, -1.1%, 0) scale(1.1);
+  }
+  to {
+    transform: translate3d(1.7%, 1.3%, 0) scale(1.24);
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Gradient / palette blobs                                                   */
+/* ------------------------------------------------------------------------- */
+
+.slbg-blobs {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: var(--slbg-blob-o, 0.5);
+  transition: opacity 0.6s ease;
+  mix-blend-mode: screen;
+}
+
+.sl-bg[data-style="gradient"] .slbg-blobs {
+  opacity: 1;
+  filter: brightness(1.5) saturate(1.2);
+}
+
+/* Gradient style reads as shapes, not haze: slightly tighter blobs so the
+   drifting radial forms stay recognisable. */
+.sl-bg[data-style="gradient"] .slbg-blob {
+  filter: blur(26px);
+}
+
+.sl-bg[data-style="solid"] .slbg-blobs {
+  opacity: 0.14;
+}
+
+.sl-bg[data-style="artwork-sharp"] .slbg-blobs {
+  opacity: 0.36;
+}
+
+.slbg-blob {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, var(--c, transparent) 0%, transparent 64%);
+  filter: blur(44px);
+  will-change: transform;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+.slbg-blob-1 {
+  width: 92%;
+  height: 96%;
+  left: -30%;
+  top: -34%;
+  animation-name: slbg-float-a;
+  animation-duration: 47s;
+}
+
+.slbg-blob-2 {
+  width: 96%;
+  height: 90%;
+  right: -16%;
+  bottom: -20%;
+  animation-name: slbg-float-b;
+  animation-duration: 59s;
+}
+
+.slbg-blob-3 {
+  width: 86%;
+  height: 92%;
+  left: 14%;
+  top: 20%;
+  opacity: 0.82;
+  animation-name: slbg-float-c;
+  animation-duration: 53s;
+}
+
+.slbg-blob-4 {
+  width: 64%;
+  height: 70%;
+  left: -4%;
+  bottom: 2%;
+  opacity: 0.7;
+  animation-name: slbg-float-d;
+  animation-duration: 67s;
+}
+
+@keyframes slbg-float-a {
+  from {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(5%, 3%, 0) scale(1.1);
+  }
+}
+
+@keyframes slbg-float-b {
+  from {
+    transform: translate3d(2%, 2%, 0) scale(1.06);
+  }
+  to {
+    transform: translate3d(-5%, -3%, 0) scale(0.94);
+  }
+}
+
+@keyframes slbg-float-c {
+  from {
+    transform: translate3d(-4%, 3%, 0) scale(0.96);
+  }
+  to {
+    transform: translate3d(4%, -4%, 0) scale(1.12);
+  }
+}
+
+@keyframes slbg-float-d {
+  from {
+    transform: translate3d(3%, -2%, 0) scale(1.02);
+  }
+  to {
+    transform: translate3d(-4%, 2%, 0) scale(0.96);
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Video mirror (single canvas, mounted by video-bg.js)                       */
+/* ------------------------------------------------------------------------- */
+
+.slbg-video {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  pointer-events: none;
+}
+
+.slbg-video.is-live {
+  opacity: 1;
+}
+
+.slbg-video canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scale(1.05);
+  filter: blur(var(--slbg-video-blur, 12px)) saturate(1.32) brightness(1.05);
+}
+
+/* When the mirror is live the blurred artwork behind it steps back so the
+   two moving images do not fight. It stays in the stack for instant fallback. */
+.sl-bg[data-style="video"].is-video-live .slbg-art {
+  opacity: 0.24;
+}
+
+.sl-bg[data-style="video"].is-video-live .slbg-blobs {
+  opacity: 0.24;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Dim, palette wash, vignette, grain                                         */
+/* ------------------------------------------------------------------------- */
+
+.slbg-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: #04040a;
+  opacity: var(--slbg-dim, 0.45);
+}
+
+.slbg-wash {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: radial-gradient(
+    82% 68% at 50% 32%,
+    var(--slbg-wash, rgba(88, 30, 46, 0.5)) 0%,
+    transparent 72%
+  );
+  mix-blend-mode: soft-light;
+}
+
+.slbg-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.9;
+  background:
+    radial-gradient(58% 54% at 50% 26%, var(--slbg-glow, rgba(150, 60, 90, 0.3)) 0%, transparent 72%),
+    radial-gradient(50% 46% at 78% 68%, var(--slbg-glow-2, rgba(60, 80, 160, 0.2)) 0%, transparent 74%);
+}
+
+.slbg-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  background:
+    radial-gradient(70% 62% at 50% 42%, rgba(3, 3, 7, 0) 0%, rgba(3, 3, 7, 0.08) 70%, rgba(3, 3, 7, 0.44) 100%),
+    linear-gradient(
+      180deg,
+      rgba(3, 3, 7, 0.5) 0%,
+      rgba(3, 3, 7, 0) 15%,
+      rgba(3, 3, 7, 0) 70%,
+      rgba(3, 3, 7, 0.56) 100%
+    );
+}
+
+.slbg-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 140px 140px;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Sharp cover panel with a mirrored reflection                               */
+/* ------------------------------------------------------------------------- */
+
+.slbg-sharp {
+  position: absolute;
+  z-index: 8;
+  right: 4%;
+  top: 50%;
+  width: min(30%, 46vh);
+  aspect-ratio: 1;
+  transform: translateY(-56%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.7s ease;
+}
+
+.sl-bg[data-style="artwork-sharp"] .slbg-sharp.is-on {
+  opacity: 1;
+}
+
+/* Panel mode: the right sidebar is too narrow for a 30% panel. The blurred
+   artwork is the whole look there. */
+.sl-stage.is-compact .slbg-sharp {
+  display: none;
+}
+
+.slbg-sharp-glow {
+  position: absolute;
+  inset: -8%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(52px) saturate(1.5) brightness(0.9);
+  opacity: 0.8;
+  border-radius: 24px;
+}
+
+.slbg-sharp-cover {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  border-radius: 10px;
+  box-shadow:
+    0 34px 80px rgba(0, 0, 0, 0.55),
+    0 2px 0 rgba(255, 255, 255, 0.08) inset;
+  -webkit-mask-image: radial-gradient(140% 140% at 50% 46%, #000 58%, rgba(0, 0, 0, 0.82) 82%, rgba(0, 0, 0, 0.4) 100%);
+  mask-image: radial-gradient(140% 140% at 50% 46%, #000 58%, rgba(0, 0, 0, 0.82) 82%, rgba(0, 0, 0, 0.4) 100%);
+}
+
+.slbg-sharp-reflection {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 66%;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.35) 42%, transparent 76%);
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.35) 42%, transparent 76%);
+}
+
+.slbg-sharp-reflection .slbg-sharp-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  transform: scaleY(-1) translateY(0);
+  transform-origin: center;
+  filter: blur(2.4px) saturate(1.12);
+  opacity: 0.9;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Lyric column scrim — the contrast guarantee.                               */
+/* Darkest where active lyric text lives; fades out toward the edges so the   */
+/* scenery still reads. This is not tied to backgroundDim on purpose.         */
+/* ------------------------------------------------------------------------- */
+
+.slbg-lyric-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      64% 76% at 50% 43%,
+      rgba(2, 2, 6, 0.7) 0%,
+      rgba(2, 2, 6, 0.6) 38%,
+      rgba(2, 2, 6, 0.3) 70%,
+      rgba(2, 2, 6, 0) 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(2, 2, 6, 0.3) 0%,
+      rgba(2, 2, 6, 0.05) 16%,
+      rgba(2, 2, 6, 0.05) 84%,
+      rgba(2, 2, 6, 0.3) 100%
+    );
+}
+
+/* Sharp style puts the column left of the panel, so darken there instead. */
+.sl-bg[data-style="artwork-sharp"] .slbg-lyric-scrim {
+  background:
+    radial-gradient(
+      56% 78% at 33% 43%,
+      rgba(2, 2, 6, 0.74) 0%,
+      rgba(2, 2, 6, 0.64) 38%,
+      rgba(2, 2, 6, 0.34) 72%,
+      rgba(2, 2, 6, 0) 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(2, 2, 6, 0.4) 0%,
+      rgba(2, 2, 6, 0.16) 26%,
+      rgba(2, 2, 6, 0.04) 76%,
+      rgba(2, 2, 6, 0) 100%
+    );
+}
+
+.sl-bg[data-style="solid"] .slbg-lyric-scrim {
+  opacity: 0.6;
+}
+
+.sl-bg[data-style="video"] .slbg-lyric-scrim {
+  opacity: 0.52;
+}
+
+/* Video keeps the same dim mapping as the other styles: combined with the
+   lyric scrim it is what guarantees active-text contrast over bright frames. */
+
+/* Sharp style pulls the lyric column left of the panel on wide overlays. */
+.sl-stage[data-bgstyle="artwork-sharp"]:not(.is-compact) .sl-column {
+  width: min(1180px, 58%);
+  margin-left: 6%;
+  margin-right: auto;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Motion                                                                    */
+/* ------------------------------------------------------------------------- */
+
+.sl-bg.is-motion-off .slbg-art-cover,
+.sl-bg.is-motion-off .slbg-blob {
+  animation: none !important;
+}
+
+.sl-bg.is-motion-off .slbg-blob {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slbg-art-cover,
+  .slbg-blob {
+    animation: none !important;
+  }
+}

@@ -10,7 +10,7 @@
   const SL = globalThis.SL;
   if (!SL || !SL.store || SL.app) return;
 
-  const VERSION = '1.0.0';
+  const VERSION = '1.1.0';
   const LOG = (...args) => console.log('[spicy]', ...args);
 
   const HOST_SELECTORS = {
@@ -350,6 +350,11 @@
       root.dataset.spicySync = state.lyrics ? state.lyrics.syncType : '';
       root.dataset.spicySource = state.lyrics ? state.lyrics.source : '';
       root.dataset.spicyOpen = shouldShow() ? '1' : '0';
+      root.dataset.spicyTitle = state.track.title || '';
+      root.dataset.spicyArtist = state.track.artist || '';
+      root.dataset.spicyDetected = state.track.title || state.track.id ? '1' : '0';
+      root.dataset.spicyLyricMode = state.settings.lyricMode || '';
+      root.dataset.spicyBg = state.settings.backgroundStyle || '';
       root.dataset.spicyMounted = (SL.overlay && SL.overlay.isMounted && SL.overlay.isMounted()) ? '1' : '0';
       root.dataset.spicyTrack = state.track.id || '';
       root.dataset.spicyKey = state.track.key || '';
@@ -366,13 +371,18 @@
     const state = SL.store.get();
     return {
       ok: true,
+      detected: !!(state.track.title || state.track.id),
       title: state.track.title,
       artist: state.track.artist,
+      album: state.track.album,
       status: state.lyricsStatus,
       syncType: state.lyrics ? state.lyrics.syncType : '',
       source: state.lyrics ? state.lyrics.source : '',
+      lyricMode: state.settings.lyricMode,
+      backgroundStyle: state.settings.backgroundStyle,
       open: shouldShow(),
       mounted: !!(SL.overlay && SL.overlay.isMounted && SL.overlay.isMounted()),
+      errors: state.ui.lastError || null,
     };
   }
 
@@ -387,6 +397,8 @@
         return true;
       case 'spicy:get-state':
         return currentStatusPayload();
+      case 'spicy:diagnostics':
+        return SL.player && SL.player.diagnostics ? SL.player.diagnostics() : { ok: false, error: 'player diagnostics unavailable' };
       case 'spicy:clear-cache':
         SL.store.clearCache().then(() => {
           const state = SL.store.get();
@@ -419,6 +431,14 @@
       if (!message || typeof message.type !== 'string' || !message.type.startsWith('spicy:')) return false;
       if (message.type === 'spicy:get-state') {
         sendResponse(currentStatusPayload());
+        return false;
+      }
+      if (message.type === 'spicy:diagnostics') {
+        try {
+          sendResponse(SL.player && SL.player.diagnostics ? SL.player.diagnostics() : { ok: false });
+        } catch (err) {
+          sendResponse({ ok: false, error: String((err && err.message) || err) });
+        }
         return false;
       }
       if (message.type === 'spicy:import-ttml') {

@@ -4,8 +4,8 @@
   const SL = globalThis.SL;
   const $ = (id) => document.getElementById(id);
 
-  const TOGGLES = ['enabled', 'autoOpen', 'autoFetch', 'minimalMode', 'showHeader', 'showInterludeDots', 'showBackground', 'reduceMotion'];
-  const SELECTS = ['mode', 'wordHighlight'];
+  const TOGGLES = ['enabled', 'autoOpen', 'autoFetch', 'minimalMode', 'showHeader', 'showInterludeDots', 'showBackground', 'backgroundMotion', 'reduceMotion'];
+  const SELECTS = ['mode', 'wordHighlight', 'lyricMode', 'backgroundStyle'];
   const RANGES = {
     fontSize: (v) => Number(v).toFixed(2) + 'x',
     lineGap: (v) => Number(v).toFixed(2) + 'x',
@@ -89,6 +89,44 @@
       setTimeout(() => (btn.textContent = 'Import…'), 2200);
       refreshStatus();
     });
+    $('copy-diag').addEventListener('click', async () => {
+      const btn = $('copy-diag');
+      try {
+        const tab = await activeTab();
+        const diag = tab ? await chrome.tabs.sendMessage(tab.id, { type: 'spicy:diagnostics' }) : { error: 'no Spotify tab' };
+        const text = JSON.stringify(diag, null, 2);
+        await navigator.clipboard.writeText(text);
+        btn.textContent = 'Copied';
+        console.log('[spicy] diagnostics', text);
+      } catch (err) {
+        btn.textContent = 'Copy failed';
+        console.error('[spicy] diagnostics failed', err);
+      }
+      setTimeout(() => (btn.textContent = 'Copy diagnostics'), 1800);
+    });
+
+    const bgPick = $('bg-image');
+    $('bg-image-pick').addEventListener('click', () => bgPick.click());
+    bgPick.addEventListener('change', async () => {
+      const file = bgPick.files && bgPick.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          await chrome.storage.local.set({ 'spicy.bgImage': String(reader.result) });
+          commit({ backgroundStyle: 'image', showBackground: true });
+        } catch (err) {
+          console.warn('[spicy] background image save failed', err);
+        }
+      };
+      reader.readAsDataURL(file);
+      bgPick.value = '';
+    });
+    $('bg-image-clear').addEventListener('click', async () => {
+      await chrome.storage.local.remove('spicy.bgImage').catch(() => {});
+      commit({ backgroundStyle: 'artwork' });
+    });
+
     $('reset').addEventListener('click', async () => {
       settings = SL.store.setSettings(SL.store.DEFAULT_SETTINGS);
       SL.store.saveSettings();
@@ -114,12 +152,23 @@
       title.textContent = 'Not on Spotify';
       sub.textContent = 'Open open.spotify.com and play a song.';
       $('source-label').textContent = '—';
+      const hint = $('detect-hint');
+      hint.textContent = '';
+      hint.classList.remove('is-warn');
       return;
     }
     try {
       const state = await chrome.tabs.sendMessage(tab.id, { type: 'spicy:get-state' });
       if (!state || !state.ok) throw new Error('no state');
       $('source-label').textContent = state.source ? state.source + ' · ' + (state.syncType || '?') : '—';
+      const hint = $('detect-hint');
+      if (state.detected) {
+        hint.textContent = 'player detected';
+        hint.classList.remove('is-warn');
+      } else {
+        hint.textContent = 'player bar not detected';
+        hint.classList.add('is-warn');
+      }
       title.textContent = state.title || 'Nothing playing';
       sub.textContent = [state.artist, state.open ? 'overlay open' : 'overlay closed'].filter(Boolean).join(' · ') || 'Waiting for playback';
       if (!settings.enabled) {
@@ -141,6 +190,12 @@
       pill.className = 'pill is-off';
       pill.textContent = 'reload';
     }
+  }
+
+  try {
+    $('version').textContent = 'v' + chrome.runtime.getManifest().version;
+  } catch {
+    /* ignore */
   }
 
   (async () => {

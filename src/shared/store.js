@@ -25,8 +25,11 @@
     autoFetch: true,
     mode: 'cinema',
     showBackground: true,
+    backgroundStyle: 'artwork',
+    backgroundMotion: true,
     backgroundBlur: 90,
-    backgroundDim: 0.62,
+    backgroundDim: 0.48,
+    lyricMode: 'cinema',
     minimalMode: false,
     showRomanization: false,
     offsetMs: 0,
@@ -40,6 +43,10 @@
   });
 
   const SETTINGS_KEY = 'spicy.settings';
+  /** Custom background image is stored separately (can be a few MB). */
+  const BG_IMAGE_KEY = 'spicy.bgImage';
+  const BACKGROUND_STYLES = ['artwork', 'artwork-sharp', 'gradient', 'solid', 'video', 'image'];
+  const LYRIC_MODES = ['cinema', 'flow', 'simple'];
   const CACHE_PREFIX = 'spicy.lyrics.';
 
   function sanitizeSettings(raw) {
@@ -59,6 +66,8 @@
     }
     out.mode = out.mode === 'panel' ? 'panel' : 'cinema';
     out.wordHighlight = out.wordHighlight === 'solid' ? 'solid' : 'gradient';
+    out.backgroundStyle = BACKGROUND_STYLES.includes(out.backgroundStyle) ? out.backgroundStyle : 'artwork';
+    out.lyricMode = LYRIC_MODES.includes(out.lyricMode) ? out.lyricMode : 'cinema';
     out.backgroundBlur = SL.util.clamp(out.backgroundBlur, 0, 200);
     out.backgroundDim = SL.util.clamp(out.backgroundDim, 0, 0.95);
     out.fontSize = SL.util.clamp(out.fontSize, 0.6, 1.8);
@@ -331,6 +340,9 @@
   SL.store = {
     DEFAULT_SETTINGS,
     SETTINGS_KEY,
+    BG_IMAGE_KEY,
+    BACKGROUND_STYLES,
+    LYRIC_MODES,
     get: snapshot,
     subscribe,
     patch,

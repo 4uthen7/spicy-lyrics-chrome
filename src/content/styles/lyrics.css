@@ -1,14 +1,23 @@
 /*
  * Spicy Lyrics for Chrome — lyric column.
  *
- * The stack is a normal flow column translated on the compositor by the spring
- * in lyrics-view.js. Each line is measured once per resize/doc build; the
- * active line rests at 42% of the stage height.
+ * The stack is a normal flow column translated on the compositor by the motion
+ * model in lyrics-view.js (spring / continuous glide / flat ease depending on
+ * `data-mode`). Each line is measured once per resize/doc build; the active line
+ * rests at 42% of the stage height.
  *
  * Karaoke fill: every word (and every line-synced line) is a gradient-clipped
  * span whose background-size is driven by --p (0..1). A dim background-color
  * sits under the gradient so unsung text stays readable. Nothing is recreated
- * per frame; only --p and the stack transform are written.
+ * per frame; only custom properties and the stack transform are written.
+ *
+ * The JS writes the depth of each row through four custom properties, all
+ * optional so the bucketed data-level rules remain the cinema baseline:
+ *   --s      scale multiplier          (depth + sizing)
+ *   --swell  per-line sine swell       (active line only, 1..1.014)
+ *   --b      blur radius               (out-of-focus depth)
+ *   --o      opacity
+ *   --bloom  accent bloom blur radius  (0px = invisible)
  */
 
 .sl-lyrics {
@@ -61,6 +70,39 @@
   will-change: transform;
 }
 
+/* Track-change crossfade: the outgoing stack is lifted out of flow so the new
+   one can be measured and laid out underneath it. */
+.sl-stack.is-leaving {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  pointer-events: none;
+}
+
+.sl-stack.is-leaving.is-fading {
+  opacity: 0;
+  transition: opacity 420ms ease;
+}
+
+.sl-stack.is-entering {
+  opacity: 0;
+}
+
+.sl-stack.is-entering.is-in {
+  opacity: 1;
+  transition: opacity 420ms ease;
+}
+
+/* Natural-width pass used by measure() to fit long lines. */
+.sl-stack.is-measuring .sl-line {
+  white-space: nowrap;
+}
+
+.sl-stack.is-measuring .sl-inner {
+  max-width: none;
+}
+
 .sl-row {
   display: block;
   position: relative;
@@ -80,7 +122,7 @@
   word-break: normal;
   line-break: strict;
   text-wrap: pretty;
-  transform: scale(var(--s, 1));
+  transform: scale(calc(var(--s, 1) * var(--swell, 1)));
   transform-origin: left center;
   filter: blur(var(--b, 0px));
   opacity: var(--o, 1);
@@ -122,14 +164,16 @@
 }
 
 /* ------------------------------------------------------------------------- */
-/* Depth states                                                              */
+/* Depth states (cinema baseline; flow overrides them per row)               */
 /* ------------------------------------------------------------------------- */
 
 .sl-row[data-level="0"] .sl-line {
   --s: 1.06;
   --b: 0px;
   --o: 1;
-  text-shadow: 0 3px 30px rgba(0, 0, 0, 0.42);
+  text-shadow:
+    0 3px 30px rgba(0, 0, 0, 0.42),
+    0 0 var(--bloom, 0px) var(--sl-accent-soft, rgba(255, 92, 138, 0.55));
 }
 
 .sl-row[data-level="1"] .sl-line {
@@ -151,11 +195,11 @@
 }
 
 /* A lyric page, not a flat list: distant rows recede a little. */
-.sl-row[data-level="2"] {
+.sl-lyrics[data-mode="cinema"] .sl-row[data-level="2"] {
   transform: rotateX(2.6deg) translateZ(-26px);
 }
 
-.sl-row[data-level="3"] {
+.sl-lyrics[data-mode="cinema"] .sl-row[data-level="3"] {
   transform: rotateX(4.2deg) translateZ(-56px);
 }
 
@@ -304,10 +348,10 @@
 }
 
 /* ------------------------------------------------------------------------- */
-/* Paused: a slow breath so a still frame does not look frozen               */
+/* Paused: a slow breath so a still frame does not look frozen (cinema only) */
 /* ------------------------------------------------------------------------- */
 
-.sl-lyrics.is-paused .sl-row[data-level="0"] .sl-line {
+.sl-lyrics[data-mode="cinema"].is-paused .sl-row[data-level="0"] .sl-line {
   animation: sl-breathe 5.6s ease-in-out infinite;
 }
 
@@ -322,13 +366,30 @@
 }
 
 /* ------------------------------------------------------------------------- */
-/* Reduced motion                                                            */
+/* Reduced motion: opacity only, no transforms, no filter                    */
 /* ------------------------------------------------------------------------- */
 
+.sl-lyrics[data-motion="reduced"] .sl-row,
+.sl-lyrics[data-motion="reduced"] .sl-line {
+  transform: none;
+  filter: none;
+  text-shadow: none;
+}
+
+.sl-lyrics[data-motion="reduced"] .sl-line {
+  transition: opacity 0.35s ease;
+}
+
+.sl-lyrics[data-motion="reduced"] .sl-dots i,
+.sl-lyrics[data-motion="reduced"].is-paused .sl-row[data-level="0"] .sl-line {
+  animation: none;
+}
+
+/* Legacy class kept for the same state (set by the renderer alongside
+   data-motion) so older stylesheets/queries still match. */
 .sl-lyrics.is-static-motion .sl-row,
 .sl-lyrics.is-static-motion .sl-line {
   transform: none;
-  transition: none;
 }
 
 .sl-lyrics.is-static-motion .sl-dots i,
@@ -388,4 +449,92 @@
 
 .sl-stage.is-compact .sl-roman {
   font-size: calc(var(--sl-fs, 20px) * 0.34);
+}
+
+/* ========================================================================= */
+/* Mode: flow — continuous glide                                             */
+/*                                                                           */
+/* The renderer writes --o / --s / --b / --bloom per visible row each frame,  */
+/* so CSS transitions would fight the stream; the whole mode runs without     */
+/* them. Far rows keep a flat, fully retired state so the hand-off at the     */
+/* edge of the styled window is invisible.                                    */
+/* ========================================================================= */
+
+.sl-lyrics[data-mode="flow"] .sl-stack {
+  transition: none;
+}
+
+.sl-lyrics[data-mode="flow"] .sl-line {
+  --swell: 1;
+  transition: none;
+  text-shadow:
+    0 2px 26px rgba(0, 0, 0, 0.36),
+    0 0 var(--bloom, 0px) var(--sl-accent-soft, rgba(255, 92, 138, 0.55));
+}
+
+.sl-lyrics[data-mode="flow"] .sl-row {
+  transform: none;
+  transition: none;
+}
+
+.sl-lyrics[data-mode="flow"] .sl-row[data-level="2"] .sl-line,
+.sl-lyrics[data-mode="flow"] .sl-row[data-level="3"] .sl-line {
+  --o: 0.13;
+  --s: 1;
+  --b: 3px;
+}
+
+.sl-lyrics[data-mode="flow"] .sl-row[data-level="0"] .sl-line {
+  /* Text shadow comes from the flow rule above; keep only the depth defaults. */
+  --s: 1;
+  --b: 0px;
+  --o: 1;
+  text-shadow:
+    0 2px 26px rgba(0, 0, 0, 0.36),
+    0 0 var(--bloom, 0px) var(--sl-accent-soft, rgba(255, 92, 138, 0.55));
+}
+
+/* ========================================================================= */
+/* Mode: simple — centred, flat, readable                                    */
+/* ========================================================================= */
+
+.sl-lyrics[data-mode="simple"] .sl-stack {
+  transition: none;
+}
+
+.sl-lyrics[data-mode="simple"] .sl-line {
+  --s: 1;
+  --b: 0px;
+  --o: 0.34;
+  --swell: 1;
+  transform: none;
+  filter: none;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.34);
+  transition: opacity 0.3s ease;
+}
+
+.sl-lyrics[data-mode="simple"] .sl-row {
+  transform: none;
+  transition: none;
+}
+
+.sl-lyrics[data-mode="simple"] .sl-row[data-level="1"] .sl-line,
+.sl-lyrics[data-mode="simple"] .sl-row[data-level="2"] .sl-line,
+.sl-lyrics[data-mode="simple"] .sl-row[data-level="3"] .sl-line {
+  --s: 1;
+  --b: 0px;
+  --o: 0.34;
+  opacity: 0.34;
+}
+
+.sl-lyrics[data-mode="simple"] .sl-row[data-level="0"] .sl-line {
+  --s: 1;
+  --b: 0px;
+  --o: 1;
+  opacity: 1;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.4);
+}
+
+.sl-lyrics[data-mode="simple"] .sl-roman {
+  color: rgba(255, 255, 255, 0.38);
 }

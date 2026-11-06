@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Spicy Lyrics for Chrome",
   "short_name": "Spicy Lyrics",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Word-by-word animated lyrics for the Spotify web player, rendered the way the Spicy Lyrics desktop extension does it.",
   "minimum_chrome_version": "120",
   "icons": {
@@ -11,7 +11,9 @@
     "48": "assets/icons/icon-48.png",
     "128": "assets/icons/icon-128.png"
   },
-  "permissions": ["storage"],
+  "permissions": [
+    "storage"
+  ],
   "host_permissions": [
     "https://open.spotify.com/*",
     "https://spclient.wg.spotify.com/*",
@@ -36,14 +38,20 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://open.spotify.com/*"],
-      "js": ["src/content/inject-main.js"],
+      "matches": [
+        "https://open.spotify.com/*"
+      ],
+      "js": [
+        "src/content/inject-main.js"
+      ],
       "run_at": "document_start",
       "world": "MAIN",
       "all_frames": false
     },
     {
-      "matches": ["https://open.spotify.com/*"],
+      "matches": [
+        "https://open.spotify.com/*"
+      ],
       "js": [
         "src/shared/contract.js",
         "src/shared/store.js",
@@ -53,6 +61,7 @@
         "src/content/lyrics/sources.js",
         "src/content/player/state.js",
         "src/content/bridge.js",
+        "src/content/ui/video-bg.js",
         "src/content/ui/background.js",
         "src/content/ui/lyrics-view.js",
         "src/content/ui/controls.js",
@@ -65,8 +74,13 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["src/content/styles/*.css", "assets/*"],
-      "matches": ["https://open.spotify.com/*"]
+      "resources": [
+        "src/content/styles/*.css",
+        "assets/*"
+      ],
+      "matches": [
+        "https://open.spotify.com/*"
+      ]
     }
   ],
   "commands": {

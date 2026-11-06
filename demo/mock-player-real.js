@@ -70,6 +70,9 @@
     rightbarArtist: $('rightbar-artist'),
   };
 
+  const params = new URLSearchParams(location.search);
+  const NO_DOM_TRACK = params.has('no-dom-track');
+
   const state = {
     index: 0,
     pos: 0,
@@ -113,6 +116,53 @@
   function paintPlayState() {
     el.playpause.setAttribute('aria-label', state.playing ? '一時停止' : '再生');
     el.ppPath.setAttribute('d', state.playing ? PAUSE_PATH : PLAY_PATH);
+    try {
+      if (navigator.mediaSession) navigator.mediaSession.playbackState = state.playing ? 'playing' : 'paused';
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function publishMediaMetadata(t) {
+    try {
+      if (!navigator.mediaSession || typeof MediaMetadata !== 'function') return;
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: t.title,
+        artist: t.artists.join(', '),
+        album: 'Nightdrive',
+        artwork: [{ src: new URL(t.cover, location.href).href, sizes: '640x640', type: 'image/png' }],
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /**
+   * ?no-dom-track=1 simulates a player-bar variant whose title/subtitle testids
+   * are absent and whose document title is the shell title. Only MediaSession
+   * metadata remains, which is exactly the real-world failure the fallback is
+   * for.
+   */
+  function stripDomTrack() {
+    if (!NO_DOM_TRACK) return;
+    try {
+      const widget = document.querySelector('[data-testid="now-playing-widget"]');
+      if (widget) widget.removeAttribute('data-testid');
+      const coverButton = document.querySelector('[data-testid="cover-art-button"]');
+      if (coverButton) coverButton.removeAttribute('data-testid');
+      el.cover.removeAttribute('data-testid');
+      el.title.removeAttribute('data-testid');
+      el.artists.removeAttribute('data-testid');
+      for (const anchor of el.artists.querySelectorAll('a')) {
+        anchor.removeAttribute('data-testid');
+        anchor.removeAttribute('href');
+      }
+      const titleSpan = el.title.querySelector('[data-testid="context-item-info-title"]');
+      if (titleSpan) titleSpan.removeAttribute('data-testid');
+      document.title = 'Spotify - Web Player: Music for everyone';
+    } catch {
+      /* ignore */
+    }
   }
 
   function paintTrack() {
@@ -137,6 +187,8 @@
     el.rightbarArtist.textContent = t.artists.join(', ');
     el.lyricsTitle.textContent = t.title;
     document.title = t.title + ' — song by ' + t.artists.join(', ') + ' | Spotify';
+    publishMediaMetadata(t);
+    stripDomTrack();
     for (const row of el.tracklist.querySelectorAll('.track-row')) {
       row.classList.toggle('is-playing', row.dataset.index === String(state.index));
     }

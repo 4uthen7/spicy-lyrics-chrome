@@ -28,6 +28,15 @@ body {
 .logo { width: 34px; height: 34px; border-radius: 9px; box-shadow: 0 4px 14px rgba(255, 92, 138, .32); }
 .head-text { flex: 1 1 auto; min-width: 0; }
 .name { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.ver {
+  font: 600 9px/1 ui-monospace, Menlo, monospace;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 2px 4px;
+  vertical-align: 2px;
+  margin-left: 4px;
+}
 .tag { font-size: 11px; color: var(--muted); }
 
 /* ---------------------------------------------------------------- switch */
@@ -141,3 +150,21 @@ output {
 }
 .link { background: none; border: 0; color: var(--muted); font-size: 10.5px; text-decoration: underline; padding: 0; }
 .link:hover { color: var(--text); }
+
+.diag-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 16px;
+}
+.detect-hint {
+  font-size: 10.5px;
+  color: var(--muted);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.detect-hint.is-warn { color: #ffb454; }

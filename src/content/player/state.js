@@ -161,6 +161,27 @@
   let lastAdvanceAt = 0;
   let lastPlaying = false;
   let lastNativeOpen = null;
+
+  /**
+   * Diagnostics ring buffer. The player bar markup differs between Spotify
+   * builds (v1 widget vs the flagged v2 widget) and some users get a build
+   * where the documented testids are absent, so the popup can ask for a report
+   * instead of guessing. Read through SL.player.diagnostics().
+   */
+  const diag = {
+    polls: 0,
+    lastOkAt: 0,
+    lastError: null,
+    errors: [],
+    lastTrackRead: null,
+    lastMedia: null,
+  };
+
+  function noteError(err) {
+    diag.lastError = String((err && err.stack) || err);
+    diag.errors.push({ at: Date.now(), message: String((err && err.message) || err) });
+    if (diag.errors.length > 8) diag.errors.shift();
+  }
   let seekSeqSeen = 0;
 
   function scopeOf(root) {
@@ -368,11 +389,110 @@
     return match ? match[1] : null;
   }
 
+
+  /**
+   * Track metadata from the MediaSession API.
+   *
+   * The web player assigns `navigator.mediaSession.metadata` on every playback
+   * update (verified in the shipped bundle: web-player.73b73c08.js calls
+   * `new MediaMetadata({title, artist, album, artwork})`). This works even when
+   * the player-bar DOM uses a widget variant whose title testids differ, and it
+   * is language-independent (unlike aria-labels).
+   */
+  function pickLargestArtwork(artwork) {
+    if (!Array.isArray(artwork) || !artwork.length) return '';
+    let best = '';
+    let bestArea = -1;
+    for (const entry of artwork) {
+      if (!entry || !entry.src) continue;
+      const sizes = String(entry.sizes || '');
+      let area = 0;
+      for (const size of sizes.split(/\s+/)) {
+        const match = /^(\d+)x(\d+)$/.exec(size);
+        if (match) area = Math.max(area, Number(match[1]) * Number(match[2]));
+        else if (size === 'any') area = Math.max(area, 1e9);
+      }
+      if (area > bestArea) {
+        bestArea = area;
+        best = entry.src;
+      }
+    }
+    return best;
+  }
+
+  function readMediaSession() {
+    try {
+      const session = typeof navigator !== 'undefined' ? navigator.mediaSession : null;
+      if (!session) return null;
+      const meta = session.metadata || null;
+      const artwork = meta && meta.artwork ? pickLargestArtwork(meta.artwork) : '';
+      const playbackState = typeof session.playbackState === 'string' ? session.playbackState : null;
+      return {
+        supported: true,
+        playbackState,
+        title: util.cleanText(meta && meta.title ? meta.title : ''),
+        artist: util.cleanText(meta && meta.artist ? meta.artist : ''),
+        album: util.cleanText(meta && meta.album ? meta.album : ''),
+        artwork,
+      };
+    } catch (err) {
+      return null;
+    }
+  }
+
+  const SHELL_TITLES = /^(spotify\b|web player|music for everyone|spotify - web player)/i;
+
+  /**
+   * Last-resort track text from document.title. The SPA writes
+   * "Song - song by Artist | Spotify" (or a localized variant); the shell page
+   * title must not be mistaken for a track.
+   */
+  function readDocumentTitle() {
+    try {
+      const raw = (typeof document !== 'undefined' && document.title) || '';
+      if (!raw) return null;
+      const cleaned = raw.replace(/\s*[|·•]\s*Spotify\s*$/i, '').trim();
+      if (!cleaned || SHELL_TITLES.test(cleaned)) return null;
+      const named = /^(.*?)\s+(?:[-–—·•])\s+(?:song by|by)\s+(.+)$/i.exec(cleaned);
+      if (named) {
+        return { title: util.cleanText(named[1]), artist: util.cleanText(named[2]) };
+      }
+      const parts = cleaned.split(/\s+[-–—·•]\s+/);
+      if (parts.length === 2 && parts[0] && parts[1]) {
+        return { title: util.cleanText(parts[0]), artist: util.cleanText(parts[1]) };
+      }
+      return { title: cleaned, artist: '' };
+    } catch (err) {
+      return null;
+    }
+  }
+
+  /** Visible line breaks inside the now-playing widget (works for both widgets). */
+  function readWidgetLines(widget) {
+    if (!widget || widget === (typeof document !== 'undefined' ? document : null)) return [];
+    try {
+      const text = widget.innerText || widget.textContent || '';
+      return text
+        .split(/\n+/)
+        .map((line) => util.cleanText(line))
+        .filter(Boolean);
+    } catch (err) {
+      return [];
+    }
+  }
+
   function readTrack() {
     const bar = pick(SELECTORS.playerBar);
-    const widget = pick(SELECTORS.nowPlaying, bar) || bar || (typeof document !== 'undefined' ? document : null);
+    const widget = pick(SELECTORS.nowPlaying, bar);
+    // Broadest scope for DOM lookups; widget-only scope is used for text lines
+    // so document text is never mistaken for a track.
+    const scope = widget || bar || (typeof document !== 'undefined' ? document : null);
+    const media = readMediaSession();
+    const mediaLines = media ? [media.title, media.artist].filter(Boolean) : [];
+    const widgetLines = readWidgetLines(widget);
+    diag.lastMedia = media;
 
-    const link = pick(SELECTORS.trackLink, widget);
+    const link = pick(SELECTORS.trackLink, scope);
     const href = (link && link.getAttribute && link.getAttribute('href')) || '';
 
     // Most builds do not expose the id here; keep the href path for others.
@@ -383,14 +503,22 @@
       id = extractTrackId(internalHref);
     }
 
-    const titleElement = pick(SELECTORS.title, widget);
+    const titleElement = pick(SELECTORS.title, scope);
     let title = titleElement && titleElement.textContent ? util.cleanText(titleElement.textContent) : '';
     if (!title && link && link.textContent) title = util.cleanText(link.textContent);
+    // v2 widget / redesign: no title testid, so fall back to the widget's own
+    // visible lines, then MediaSession, then document.title.
+    if (!title && widgetLines.length) title = widgetLines[0];
+    if (!title && media && media.title) title = media.title;
+    if (!title) {
+      const fromDocument = readDocumentTitle();
+      if (fromDocument && fromDocument.title) title = fromDocument.title;
+    }
 
     let artist = '';
     let album = '';
     const arts = [];
-    const subtitleElements = pickAll(SELECTORS.subtitleLinks, widget);
+    const subtitleElements = pickAll(SELECTORS.subtitleLinks, scope);
     for (const element of subtitleElements) {
       const text = util.cleanText(element.textContent || '');
       if (!text) continue;
@@ -415,15 +543,36 @@
     // The title anchor's href is the ALBUM path for tracks in this build; it is
     // a useful album hint for the synthetic identity and for cache separation.
     const albumHref = (link && link.getAttribute && link.getAttribute('href')) || '';
-    const keyParts = [title, arts.join('\u0000'), albumHref].join('|');
-    const key = title ? 'np:' + hash32(keyParts) : null;
+
+    // Fallbacks when the widget hides the subtitle block entirely.
+    if (!artist) {
+      const artistAnchors = widget ? widget.querySelectorAll('a[href*="/artist/"]') : [];
+      for (const anchor of artistAnchors) {
+        const text = util.cleanText(anchor.textContent || '');
+        if (text) arts.push(text);
+      }
+      if (arts.length) artist = arts.join(', ');
+      else if (widgetLines.length > 1) artist = widgetLines[1];
+      else if (media && media.artist) artist = media.artist;
+      else {
+        const fromDocument = readDocumentTitle();
+        if (fromDocument && fromDocument.artist) artist = fromDocument.artist;
+      }
+    }
+    if (!album && media && media.album) album = media.album;
 
     // Some layouts repeat the artist list in a second, href-less subtitle node.
     if (album && album.replace(/\s+/g, '') === artist.replace(/\s+/g, '')) album = '';
 
-    const durationMs = readDurationMs(bar || widget);
+    // Synthetic identity is computed after every metadata fallback, so a build
+    // that only surfaces MediaSession data still keys the track consistently.
+    const keyParts = [title, artist, album, albumHref].join('|');
+    const key = title ? 'np:' + hash32(keyParts) : null;
 
-    return {
+    const durationMs = readDurationMs(bar || widget || scope);
+    const coverUrl = readCoverUrl(widget || scope) || (media && media.artwork) || '';
+
+    const result = {
       id,
       key,
       albumHref,
@@ -431,10 +580,23 @@
       title,
       artist,
       album,
-      coverUrl: readCoverUrl(widget),
+      coverUrl,
       durationMs,
       trackUrl: id ? 'https://open.spotify.com/track/' + id : null,
     };
+    diag.lastTrackRead = {
+      title,
+      artist,
+      album,
+      hasWidget: !!widget,
+      hasPlayerBar: !!bar,
+      hasTitleElement: !!titleElement,
+      widgetLines: widgetLines.slice(0, 4),
+      mediaSession: media ? { title: media.title, artist: media.artist, artwork: !!media.artwork, playbackState: media.playbackState } : null,
+      documentTitle: (typeof document !== 'undefined' && document.title) || '',
+      coverFrom: coverUrl && media && coverUrl === media.artwork ? 'mediaSession' : coverUrl ? 'dom' : 'none',
+    };
+    return result;
   }
 
   // Icon paths are locale-independent (evidence/10-playpause-icons.txt).
@@ -632,6 +794,20 @@
   }
 
   function pollOnce() {
+    diag.polls += 1;
+    try {
+      pollOnceUnsafe();
+      diag.lastOkAt = Date.now();
+    } catch (err) {
+      noteError(err);
+      if (!diag.lastErrorLogged) {
+        diag.lastErrorLogged = true;
+        console.warn('[spicy] player poll failed', err);
+      }
+    }
+  }
+
+  function pollOnceUnsafe() {
     if (!started) return;
     if (typeof document === 'undefined') return;
 
@@ -686,9 +862,14 @@
       }
     }
 
+    const media = readMediaSession();
+    const mediaPlaying =
+      media && media.playbackState === 'playing' ? true
+        : media && media.playbackState === 'paused' ? false
+          : null;
     const labelPlaying = readPlayLabel();
     const reading = readPosition(store.get().track.durationMs);
-    const isPlaying = resolvePlaying(labelPlaying, reading ? reading.positionMs : null);
+    const isPlaying = resolvePlaying(labelPlaying != null ? labelPlaying : mediaPlaying, reading ? reading.positionMs : null);
     applyPlayback(reading, isPlaying);
 
     const nativeOpen = isNativeLyricsOpen();
@@ -914,11 +1095,67 @@
     return true;
   }
 
+  /** Structured snapshot for the popup's diagnostics panel and bug reports. */
+  function diagnostics() {
+    const state = store.get();
+    let range = null;
+    try {
+      const input = readRangeInput();
+      range = input ? { max: input.max, value: input.value, ariaValueText: input.ariaValueText, hasInput: !!input.input } : null;
+    } catch (err) {
+      range = null;
+    }
+    const media = readMediaSession();
+    return {
+      at: new Date().toISOString(),
+      url: typeof location !== 'undefined' ? location.href : '',
+      polls: diag.polls,
+      lastOkAt: diag.lastOkAt ? new Date(diag.lastOkAt).toISOString() : null,
+      lastError: diag.lastError,
+      errors: diag.errors.slice(-5),
+      mediaSession: media ? { ...media } : { supported: false },
+      documentTitle: (typeof document !== 'undefined' && document.title) || '',
+      found: {
+        playerBar: !!pick(SELECTORS.playerBar),
+        widget: !!pick(SELECTORS.nowPlaying),
+        title: !!pick(SELECTORS.title),
+        artist: !!pick(SELECTORS.subtitleLinks),
+        cover: !!pick(SELECTORS.cover),
+        progressBar: !!pick(SELECTORS.progressBar),
+        playButton: !!pick(SELECTORS.playPause),
+        range,
+      },
+      nativeLyricsOpen: isNativeLyricsOpen(),
+      mediaElements: typeof document !== 'undefined' ? document.querySelectorAll('video, audio').length : 0,
+      track: {
+        id: state.track.id,
+        key: state.track.key,
+        title: state.track.title,
+        artist: state.track.artist,
+        album: state.track.album,
+        coverUrl: state.track.coverUrl ? state.track.coverUrl.slice(0, 120) : '',
+        durationMs: state.track.durationMs,
+      },
+      playback: {
+        positionMs: Math.round(store.positionNow()),
+        isPlaying: state.playback.isPlaying,
+      },
+      lyrics: {
+        status: state.lyricsStatus,
+        source: state.lyrics ? state.lyrics.source : null,
+        syncType: state.lyrics ? state.lyrics.syncType : null,
+        lines: state.lyrics && state.lyrics.lines ? state.lyrics.lines.length : 0,
+      },
+      lastTrackRead: diag.lastTrackRead,
+    };
+  }
+
   SL.player = {
     SELECTORS,
     start,
     stop,
     seek,
+    diagnostics,
     /** Forces one synchronous DOM read; useful for tests and the demo harness. */
     refresh: pollOnce,
   };

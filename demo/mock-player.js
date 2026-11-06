@@ -107,6 +107,26 @@
   function paintPlayState() {
     el.playpause.setAttribute('aria-label', state.playing ? 'Pause' : 'Play');
     el.playpause.textContent = state.playing ? '⏸' : '▶';
+    // The real web player mirrors playback state here as well.
+    try {
+      if (navigator.mediaSession) navigator.mediaSession.playbackState = state.playing ? 'playing' : 'paused';
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function publishMediaMetadata(t) {
+    try {
+      if (!navigator.mediaSession || typeof MediaMetadata !== 'function') return;
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: t.title,
+        artist: t.artist,
+        album: t.album,
+        artwork: [{ src: new URL(t.cover, location.href).href, sizes: '640x640', type: 'image/png' }],
+      });
+    } catch {
+      /* ignore */
+    }
   }
 
   function paintNowPlaying() {
@@ -125,6 +145,7 @@
     el.rightbarArtist.textContent = t.artist;
     el.lyricsTrackTitle.textContent = t.title;
     document.title = t.title + ' — song by ' + t.artist + ' | Spotify';
+    publishMediaMetadata(t);
     for (const row of el.tracklist.querySelectorAll('.track-row')) {
       row.classList.toggle('is-playing', row.dataset.index === String(state.index));
     }

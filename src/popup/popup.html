@@ -10,7 +10,7 @@
   <header class="head">
     <img class="logo" src="../../assets/icons/icon-48.png" alt="" />
     <div class="head-text">
-      <div class="name">Spicy Lyrics</div>
+      <div class="name">Spicy Lyrics <span class="ver" id="version"></span></div>
       <div class="tag">Spotify web player · word-by-word</div>
     </div>
     <label class="switch master" title="Enable the overlay">
@@ -31,6 +31,10 @@
       <button class="primary" id="toggle-overlay" type="button">Toggle overlay</button>
       <button class="ghost" id="clear-cache" type="button">Clear cache</button>
     </div>
+    <div class="diag-row">
+      <span class="detect-hint" id="detect-hint"></span>
+      <button class="link" id="copy-diag" type="button">Copy diagnostics</button>
+    </div>
   </section>
 
   <section class="group">
@@ -43,9 +47,17 @@
       </select>
     </div>
     <div class="row">
+      <label for="lyricMode">Lyric motion</label>
+      <select id="lyricMode">
+        <option value="cinema">Cinema (spring)</option>
+        <option value="flow">Flow (continuous)</option>
+        <option value="simple">Simple (flat)</option>
+      </select>
+    </div>
+    <div class="row">
       <label for="wordHighlight">Word fill</label>
       <select id="wordHighlight">
-        <option value="gradient">Gradient wip</option>
+        <option value="gradient">Gradient wipe</option>
         <option value="solid">Solid</option>
       </select>
     </div>
@@ -100,10 +112,31 @@
   </section>
 
   <section class="group">
-    <div class="group-title">Appearance</div>
+    <div class="group-title">Background</div>
+    <div class="row">
+      <label for="backgroundStyle">Style</label>
+      <select id="backgroundStyle">
+        <option value="artwork">Album art (blurred)</option>
+        <option value="artwork-sharp">Album cover + reflection</option>
+        <option value="gradient">Palette glow</option>
+        <option value="solid">Flat colour</option>
+        <option value="video">Video (mirror player)</option>
+        <option value="image">Custom image</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="bg-image">Custom image</label>
+      <button class="ghost small" id="bg-image-pick" type="button">Choose…</button>
+      <input type="file" id="bg-image" accept="image/*" hidden />
+      <button class="link" id="bg-image-clear" type="button">Clear</button>
+    </div>
     <div class="row toggle-row">
       <label for="showBackground">Dynamic background</label>
       <label class="switch"><input type="checkbox" id="showBackground" /><span class="slider"></span></label>
+    </div>
+    <div class="row toggle-row">
+      <label for="backgroundMotion">Background motion</label>
+      <label class="switch"><input type="checkbox" id="backgroundMotion" /><span class="slider"></span></label>
     </div>
     <div class="row">
       <label for="fontSize">Text size</label>

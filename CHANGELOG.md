@@ -4,6 +4,63 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] — 2026-11-06
+
+Playback detection fix, cinematic backgrounds, and lyric motion modes.
+
+### Fixed
+
+- **Playback not detected on the live web player.** Track metadata is now read
+  from three independent sources: `navigator.mediaSession.metadata` (the web
+  player publishes title/artist/album/artwork on every playback update), the
+  player-bar DOM with v1/v2-widget fallbacks (visible text lines, artist anchors,
+  cover `<img>`), and `document.title`. Play state comes from the play/pause SVG
+  glyph, then `mediaSession.playbackState`, then position delta. A track is now
+  recognised even when the player bar renders the flagged v2 widget without the
+  documented title testids.
+- Synthetic track identity is computed after every metadata fallback, so cache
+  and resolver keys stay stable when only MediaSession data is available.
+- Player polling is wrapped in an error boundary with a diagnostics ring buffer;
+  one bad read no longer stops playback observation for the rest of the session.
+
+### Added
+
+- **Background styles** (`showBackground`, `backgroundStyle`, `backgroundMotion`):
+  blurred album art with Ken Burns drift, jacket cover panel with a mirrored
+  reflection, palette glow blobs, flat tinted base, **page-video mirror**, and a
+  user image.
+- **Page-video background**: mirrors a visible `<video>` (music videos, video
+  podcasts) into a single canvas through `requestVideoFrameCallback` +
+  `drawImage`, cover-cropped and blurred. The source element is never touched,
+  and no pixel is read back (tainted-canvas safe). Falls back to album art and
+  rescans every second.
+- **Lyric motion modes**: `flow` (continuous interpolation between line anchors,
+  no boundary snap) and `simple` (flat, no blur/scale/tilt), alongside `cinema`.
+  Reduced-motion lowers all of them to opacity transitions.
+- **Diagnostics**: the popup shows whether the player was detected, and
+  "Copy diagnostics" copies a JSON report (selector hits, MediaSession state,
+  range-input values, last track read, recent errors, lyrics status) produced by
+  `SL.player.diagnostics()`.
+- Custom background image upload in the popup (`chrome.storage.local['spicy.bgImage']`).
+- New demo harness modes: `?no-dom-track=1` (MediaSession-only detection) and a
+  playing `<video>` fixture for the video background.
+- e2e expanded to 35 checks covering MediaSession-only detection, all lyric
+  modes, background styles, the video mirror and the diagnostics round-trip.
+
+### Changed
+
+- Default background dim lowered to 0.48 and video blur reduced so artwork and
+  video read more vividly while keeping lyric contrast.
+- Idle copy now explains what to do when playback is not detected.
+
+### Known limitations
+
+- The video background requires a visible page `<video>`; audio-only tracks keep
+  the album-art background.
+- The direct `spclient` fetch path still depends on a captured bearer; logged-in
+  playback was not available in the development environment, so verification is
+  MediaSession/DOM/mock based.
+
 ## [1.0.0] — 2026-11-06
 
 First public release. Chrome extension that rebuilds the Spicy Lyrics desktop

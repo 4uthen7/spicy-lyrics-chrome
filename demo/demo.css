@@ -226,3 +226,19 @@ html, body {
   border-radius: 999px; padding: 8px 14px; font: 600 12px/1 var(--font); cursor: pointer;
 }
 .lyrics-btn.is-active { background: #fff; color: #000; border-color: #fff; }
+
+/* Music-video frame (the real player shows one for video content). The
+   extension mirrors it into the lyrics background when style = video. */
+.demo-video {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  width: 300px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 10px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .55);
+  opacity: .92;
+  z-index: 2;
+  pointer-events: none;
+}
