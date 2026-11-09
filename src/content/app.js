@@ -10,7 +10,7 @@
   const SL = globalThis.SL;
   if (!SL || !SL.store || SL.app) return;
 
-  const VERSION = '1.1.0';
+  const VERSION = '1.1.1';
   const LOG = (...args) => console.log('[spicy]', ...args);
 
   const HOST_SELECTORS = {
@@ -525,11 +525,24 @@
     wireGlobalEvents();
 
     let lastMountCheck = 0;
+    let lastPosMirror = 0;
     const loop = () => {
       const now = performance.now();
       if (now - lastMountCheck > 120) {
         lastMountCheck = now;
         syncMount();
+      }
+      // Expose the interpolated playback clock for the harness (and for users
+      // debugging sync): 100 ms resolution is enough and avoids per-frame DOM writes.
+      if (now - lastPosMirror > 100) {
+        lastPosMirror = now;
+        const root = document.documentElement;
+        if (root) {
+          root.dataset.spicyPos = String(Math.round(SL.store.positionNow()));
+          const playback = SL.store.get().playback;
+          root.dataset.spicyRate = Number(playback.rate || 1).toFixed(3);
+          root.dataset.spicySyncSrc = playback.source || 'none';
+        }
       }
       requestAnimationFrame(loop);
     };

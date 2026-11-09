@@ -57,6 +57,9 @@
 
     <main class="main main-view-container" data-testid="main-view-container">
       <video class="demo-video" id="demo-video" src="./fixtures/canvas-loop.mp4" muted loop playsinline autoplay aria-hidden="true"></video>
+      <!-- Playback element: the real client pipes audio through a media element,
+           so the extension can read an exact currentTime clock. -->
+      <audio id="demo-clock" src="./fixtures/silence-133.m4a" preload="auto" muted aria-hidden="true" style="display:none"></audio>
       <section class="content" id="home-view">
         <div class="hero">
           <img class="hero-cover" id="hero-cover" src="./fixtures/cover-1.png" alt="" />

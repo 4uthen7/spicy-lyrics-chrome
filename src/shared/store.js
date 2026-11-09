@@ -96,6 +96,8 @@
       rate: 1,
       /** Bumped whenever a seek is inferred; renderer snaps on change. */
       seekSeq: 0,
+      /** Where the current clock reading came from: 'media' | 'dom' | 'none'. */
+      source: 'none',
     },
     /** @type {SL.LyricsDoc|null} */
     lyrics: null,
@@ -173,23 +175,43 @@
 
   /**
    * Re-bases the playback clock from a DOM observation.
+   *
+   * The web player quantises the reported position (its hidden range input is
+   * updated in steps, and the clock text only has second resolution), so a
+   * naive "set the clock to the DOM value" loop makes playback position step
+   * backwards on every poll. That is what made the karaoke highlight jitter
+   * around the same spot. Callers therefore separate three cases:
+   *
+   *   - `exact`: this value is the deliberate new clock (no auto seek detect,
+   *     no monotonic guard); used for smoothed/rate-corrected updates.
+   *   - `seek`: a real seek; bumps `seekSeq` so the renderer snaps.
+   *   - default: a raw DOM reading; a big jump becomes a seek, and a small
+   *     backward delta is ignored because it is quantisation, not a seek.
+   *
    * @param {number} positionMs
    * @param {boolean} isPlaying
-   * @param {{ seek?: boolean, durationMs?: number }} [opts]
+   * @param {{ seek?: boolean, exact?: boolean, rate?: number, durationMs?: number }} [opts]
    */
   function setPlayback(positionMs, isPlaying, opts = {}) {
     const p = state.playback;
     const prev = positionNow();
     let seek = !!opts.seek;
-    if (!seek) {
+    if (!seek && !opts.exact) {
       const delta = positionMs - prev;
-      // A backward jump of any size, or a forward jump beyond what wall-clock
-      // interpolation could explain, means the user seeked or the DOM lagged.
-      if (delta < -350 || delta > 2500) seek = true;
+      // Only a real seek (or the clock being badly out of sync) re-bases hard.
+      if (delta < -1500 || delta > 2500) seek = true;
     }
-    p.positionMs = Math.max(0, positionMs);
+    let next = Math.max(0, positionMs);
+    if (!seek && !opts.exact) {
+      // Quantised readings sit behind the interpolated clock; never walk it
+      // backwards for a small delta.
+      if (next < prev && prev - next < 1500) next = prev;
+    }
+    p.positionMs = next;
     p.isPlaying = !!isPlaying;
     p.at = SL.util.now();
+    const rate = Number(opts.rate);
+    p.rate = Number.isFinite(rate) && rate > 0.5 && rate < 2 ? rate : 1;
     if (seek) p.seekSeq += 1;
     if (opts.durationMs != null && opts.durationMs !== state.track.durationMs) {
       state.track.durationMs = opts.durationMs;

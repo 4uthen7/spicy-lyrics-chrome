@@ -72,6 +72,12 @@
 
   const params = new URLSearchParams(location.search);
   const NO_DOM_TRACK = params.has('no-dom-track');
+  // ?coarse=1000 reproduces the real player's quantised seek-bar updates: the
+  // hidden range input only moves in steps while the visual bar stays smooth.
+  const COARSE_MS = Math.max(0, Math.min(5000, Number(params.get('coarse')) || 0));
+  // ?no-media-clock=1 removes the playback element so the seek-bar clock path is
+  // exercised instead (the real client may keep its element detached).
+  const MEDIA_CLOCK = !params.has('no-media-clock');
 
   const state = {
     index: 0,
@@ -92,12 +98,42 @@
     return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
   }
 
+  const audioClock = document.getElementById('demo-clock');
+
+  /**
+   * Keeps the hidden playback element roughly aligned with the demo clock. The
+   * real client plays audio through such an element; the extension reads it as
+   * a precise clock. Track 0 only (the fixture is 133 s).
+   */
+  function syncAudioClock(force) {
+    if (!MEDIA_CLOCK || !audioClock) return;
+    try {
+      if (state.index !== 0) {
+        if (!audioClock.paused) audioClock.pause();
+        return;
+      }
+      const want = state.pos / 1000;
+      if (force || Math.abs(audioClock.currentTime - want) > 0.6) {
+        audioClock.currentTime = want;
+      }
+      if (state.playing && audioClock.paused) audioClock.play().catch(() => {});
+      if (!state.playing && !audioClock.paused) audioClock.pause();
+    } catch {
+      /* best effort */
+    }
+  }
+
   function paint(force) {
     const t = track();
     const ratio = Math.min(1, Math.max(0, state.pos / t.duration));
     // Hidden range input: the real position source in this build.
     el.seekRange.max = String(t.duration);
-    el.seekRange.value = String(Math.round(state.pos));
+    const quantum = COARSE_MS > 0 ? COARSE_MS : 1;
+    const quantised = COARSE_MS > 0 ? Math.floor(state.pos / quantum) * quantum : Math.round(state.pos);
+    if (force || quantised !== state.lastRangeValue) {
+      el.seekRange.value = String(quantised);
+      state.lastRangeValue = quantised;
+    }
     el.seekRange.setAttribute('aria-valuetext', clock(state.pos) + '/' + clock(t.duration));
     // Visual bar driven by the CSS custom property the player uses.
     el.progressBar.style.setProperty('--progress-bar-transform', (ratio * 100).toFixed(3) + '%');
@@ -265,6 +301,7 @@
       if (state.pos >= track().duration) state.pos = 0;
     }
     paint(false);
+    syncAudioClock(false);
     paintActive();
     requestAnimationFrame(tick);
   }
@@ -287,12 +324,14 @@
     state.pos = Math.max(0, Math.min(track().duration, ms));
     state.activeIdx = -1;
     paint(true);
+    syncAudioClock(true);
     paintActive();
   }
 
   function togglePlay() {
     state.playing = !state.playing;
     paintPlayState();
+    syncAudioClock(false);
   }
 
   function setLyricsOpen(open) {

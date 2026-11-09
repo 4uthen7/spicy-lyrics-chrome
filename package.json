@@ -1,6 +1,6 @@
 {
   "name": "spicy-lyrics-chrome",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "type": "module",
   "description": "Spicy Lyrics for the Spotify web player: word-by-word animated lyrics as a Chrome extension.",

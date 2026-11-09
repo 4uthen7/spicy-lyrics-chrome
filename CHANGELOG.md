@@ -4,6 +4,38 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] — 2026-11-09
+
+Karaoke highlight no longer drifts backwards or jitters around the same spot.
+
+### Fixed
+
+- **Playback clock was re-based from quantised DOM readings.** The web player's
+  seek bar updates in steps (and its clock text only has second resolution), so
+  every poll wrote a value slightly behind the interpolated clock, producing the
+  "highlight jumps back, then creeps forward again" jitter. The clock now pulls
+  forward only and trims its rate by at most 8% to converge; only jumps over
+  1.5 s are treated as seeks. A small backward delta is treated as quantisation,
+  never as a seek.
+- **Exact clock source**: when the page exposes its playback media element
+  (`<audio>`/`<video>` with a matching duration, not looping, position agreeing
+  with the DOM), `currentTime` is used as the clock. That removes the seek-bar
+  quantisation lag entirely.
+- Diagnostics now include the clock source, rate, recent seek count and a ring
+  buffer of DOM/clock/error samples, so a remaining offset can be diagnosed.
+
+### Added
+
+- Fine sync controls: 10 ms steps in the popup offset slider and ±10/±100 buttons
+  in the in-overlay settings panel.
+
+### Verification
+
+- e2e now checks that the clock never steps backwards under a 1 s-quantised
+  position source, stays within one quantisation step of the player, keeps its
+  rate correction subtle, treats large jumps as seeks, and uses the media-element
+  clock when present (41/41 checks).
+
 ## [1.1.0] — 2026-11-06
 
 Playback detection fix, cinematic backgrounds, and lyric motion modes.

@@ -175,7 +175,44 @@
     errors: [],
     lastTrackRead: null,
     lastMedia: null,
+    /** Rolling playback-clock observations, newest last (see diagnostics()). */
+    clockSamples: [],
+    domSteps: [],
+    rate: 1,
+    seeks: 0,
   };
+
+  /** Jump beyond this is a real seek (or a badly desynced clock), not jitter. */
+  const HARD_JUMP_MS = 1500;
+  /** Within this the interpolated clock is considered aligned; no rate change. */
+  const ALIGN_DEADBAND_MS = 70;
+  /** Max clock rate correction used to converge on the DOM without stepping back. */
+  const MAX_RATE_TRIM = 0.08;
+
+  function noteClock(domMs, predictedBefore, afterMs, error, rate, precise) {
+    diag.clockSamples.push({
+      src: diag.clockSource || 'dom',
+      at: Date.now(),
+      dom: Math.round(domMs),
+      before: Math.round(predictedBefore),
+      after: Math.round(afterMs),
+      error: Math.round(error),
+      rate: Number(rate.toFixed(3)),
+      precise: !!precise,
+    });
+    if (diag.clockSamples.length > 16) diag.clockSamples.shift();
+    diag.rate = rate;
+  }
+
+  function noteDomStep(domMs) {
+    const prev = diag.domSteps[diag.domSteps.length - 1];
+    if (!prev) {
+      diag.domSteps.push({ at: Date.now(), dom: Math.round(domMs), step: 0 });
+      return;
+    }
+    diag.domSteps.push({ at: Date.now(), dom: Math.round(domMs), step: Math.round(domMs - prev.dom) });
+    if (diag.domSteps.length > 16) diag.domSteps.shift();
+  }
 
   function noteError(err) {
     diag.lastError = String((err && err.stack) || err);
@@ -635,6 +672,52 @@
   }
 
   /**
+   * Exact playback clock from an attached media element.
+   *
+   * The web player pipes playback through an audio element (it calls
+   * createMediaElementSource in the shipped bundle), and video content uses a
+   * <video>. When such an element is in the DOM, `currentTime` is a continuous,
+   * millisecond-accurate clock that beats the quantised seek bar. Guards keep
+   * us from grabbing the wrong element: it must not loop, its duration must
+   * match the track, and its position must agree with the DOM reading.
+   *
+   * UNVERIFIED: whether the playback element is attached to the document in
+   * every build; when it is not, the seek-bar path is used.
+   */
+  function readMediaClock(knownDurationMs, referencePositionMs) {
+    if (typeof document === 'undefined') return null;
+    const nodes = document.querySelectorAll('audio, video');
+    let best = null;
+    for (const el of nodes) {
+      try {
+        if (!el.isConnected || el.loop) continue;
+        const duration = Number(el.duration);
+        if (!isFinite(duration) || duration <= 1) continue;
+        if (knownDurationMs > 0) {
+          const tolerance = Math.max(2000, knownDurationMs * 0.04);
+          if (Math.abs(duration * 1000 - knownDurationMs) > tolerance) continue;
+        }
+        const position = Number(el.currentTime);
+        if (!isFinite(position) || position < 0 || position > duration + 0.5) continue;
+        if (referencePositionMs != null && Math.abs(position * 1000 - referencePositionMs) > 3000) continue;
+        const score = (el.paused ? 0 : 2) + (el.readyState >= 2 ? 1 : 0);
+        if (!best || score > best.score) {
+          best = {
+            score,
+            positionMs: Math.round(position * 1000),
+            durationMs: Math.round(duration * 1000),
+            precise: true,
+            source: 'media',
+          };
+        }
+      } catch (err) {
+        /* a detached or cross-origin element can throw on duration access */
+      }
+    }
+    return best ? { positionMs: best.positionMs, durationMs: best.durationMs, precise: true, source: 'media' } : null;
+  }
+
+  /**
    * Position/duration sources, in the order the shipped build prefers:
    *   1. hidden range input inside the seek bar (value/max in ms)
    *   2. its aria-valuetext ("m:ss/m:ss")
@@ -774,23 +857,49 @@
   function applyPlayback(reading, isPlaying) {
     if (!reading) {
       // No progress DOM at all: still publish the play/pause toggle state.
-      store.setPlayback(store.positionNow(), isPlaying);
+      store.setPlayback(store.positionNow(), isPlaying, { exact: true });
       return;
     }
     const durationMs = reading.durationMs || undefined;
-    if (reading.precise) {
-      store.setPlayback(reading.positionMs, isPlaying, { durationMs });
-      return;
-    }
+    const domMs = reading.positionMs;
+    noteDomStep(domMs);
+    const predicted = store.positionNow();
+    const error = domMs - predicted;
+
     if (!isPlaying) {
-      store.setPlayback(reading.positionMs, false, { durationMs });
+      // Paused: the DOM value is the truth. Only call a big delta a seek.
+      const seek = Math.abs(error) > HARD_JUMP_MS;
+      store.setPlayback(domMs, false, { durationMs, seek, exact: !seek });
+      noteClock(domMs, predicted, store.positionNow(), error, 1, reading.precise);
       return;
     }
-    // Second-quantized DOM clock while playing: never re-base the interpolated
-    // clock backwards (that would fake a seek every poll). Pull it forward only.
-    const current = store.positionNow();
-    const target = reading.positionMs > current + 50 ? reading.positionMs : current;
-    store.setPlayback(target, true, { durationMs });
+
+    if (Math.abs(error) > HARD_JUMP_MS) {
+      // Real seek (or the tab was suspended): snap and let the renderer catch up.
+      diag.seeks += 1;
+      store.setPlayback(domMs, true, { durationMs, seek: true });
+      noteClock(domMs, predicted, store.positionNow(), error, 1, reading.precise);
+      return;
+    }
+
+    if (error > ALIGN_DEADBAND_MS) {
+      // The DOM is ahead of the interpolated clock: pull the clock forward
+      // without flagging a seek, so the renderer glides instead of snapping.
+      store.setPlayback(domMs, true, { durationMs, exact: true });
+      noteClock(domMs, predicted, store.positionNow(), error, 1, reading.precise);
+      return;
+    }
+
+    // Usual case: the DOM reading is quantised and therefore behind (or equal
+    // to) the interpolated clock. Keep the clock where it is and trim its rate
+    // so it converges on the DOM without ever stepping backwards. This is what
+    // removes the classic "highlight jumps back every poll" jitter.
+    const rate =
+      Math.abs(error) < ALIGN_DEADBAND_MS
+        ? 1
+        : util.clamp(1 + error / 4000, 1 - MAX_RATE_TRIM, 1 + MAX_RATE_TRIM);
+    store.setPlayback(predicted, true, { durationMs, exact: true, rate });
+    noteClock(domMs, predicted, store.positionNow(), error, rate, reading.precise);
   }
 
   function pollOnce() {
@@ -868,9 +977,18 @@
         : media && media.playbackState === 'paused' ? false
           : null;
     const labelPlaying = readPlayLabel();
-    const reading = readPosition(store.get().track.durationMs);
+    let reading = readPosition(store.get().track.durationMs);
+    const mediaClock = readMediaClock(
+      reading ? reading.durationMs : store.get().track.durationMs,
+      reading ? reading.positionMs : null,
+    );
+    if (mediaClock) reading = mediaClock;
+    diag.clockSource = reading ? reading.source || 'dom' : 'none';
     const isPlaying = resolvePlaying(labelPlaying != null ? labelPlaying : mediaPlaying, reading ? reading.positionMs : null);
     applyPlayback(reading, isPlaying);
+    if (store.get().playback.source !== (diag.clockSource || 'none')) {
+      store.patch({ playback: { source: diag.clockSource || 'none' } });
+    }
 
     const nativeOpen = isNativeLyricsOpen();
     if (nativeOpen !== lastNativeOpen) {
@@ -1139,6 +1257,12 @@
       playback: {
         positionMs: Math.round(store.positionNow()),
         isPlaying: state.playback.isPlaying,
+        rate: Number((state.playback.rate || 1).toFixed(4)),
+        clockSource: diag.clockSource || 'none',
+        seeks: diag.seeks,
+        clockSamples: diag.clockSamples.slice(-10),
+        domSteps: diag.domSteps.slice(-10).map((s) => s.step),
+        offsetMs: (state.settings && state.settings.offsetMs) || 0,
       },
       lyrics: {
         status: state.lyricsStatus,

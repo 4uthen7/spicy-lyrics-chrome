@@ -530,6 +530,88 @@ async function main() {
       await setSettings({ lyricMode: 'cinema', backgroundStyle: 'artwork', backgroundMotion: true });
     }
 
+    // ---------------------------------------------------------------------
+    // Phase 5: sync-clock quality against a 1 s-quantised position source
+    // (the real player updates its hidden range input in steps; a naive
+    // re-base made the karaoke highlight jump backwards every poll).
+    // ---------------------------------------------------------------------
+    await cdp.send('Page.navigate', { url: `${server.url}/demo/index-real.html?coarse=1000&no-media-clock=1` });
+    await waitFor(async () => (await cdp.eval(STATUS_JS)).version, { timeoutMs: 15000, description: 'coarse content script' });
+    await waitFor(
+      async () => {
+        const s = await cdp.eval(STATUS_JS);
+        return s.status === 'ready' && s.mounted === '1';
+      },
+      { timeoutMs: 25000, description: 'coarse lyrics' },
+    ).catch(() => null);
+    await cdp.eval('window.__spicyDemo.seekTo(20000)');
+    await sleep(700);
+
+    const samples = [];
+    for (let i = 0; i < 32; i++) {
+      samples.push(Number(await cdp.eval("document.documentElement.dataset.spicyPos || 0")));
+      await sleep(80);
+    }
+    let backwards = 0;
+    let maxStep = 0;
+    for (let i = 1; i < samples.length; i++) {
+      const delta = samples[i] - samples[i - 1];
+      if (delta < -5) backwards += 1;
+      maxStep = Math.max(maxStep, delta);
+    }
+    check(
+      'playback clock is monotonic with a 1s-quantised position source',
+      backwards === 0 && maxStep < 450,
+      `backwards=${backwards} maxStep=${maxStep}ms samples=${samples.length}`,
+    );
+
+    const clockInfo = JSON.parse(
+      await cdp.eval(`JSON.stringify({
+        pos: Number(document.documentElement.dataset.spicyPos || 0),
+        demo: window.__spicyDemo.state.pos,
+        rate: Number(document.documentElement.dataset.spicyRate || 1),
+      })`),
+    );
+    const drift = Math.abs(clockInfo.pos - clockInfo.demo);
+    check(
+      'clock stays within one quantisation step of the player clock',
+      drift < 1600,
+      `drift=${Math.round(drift)}ms rate=${clockInfo.rate}`,
+    );
+    check('rate correction stays subtle', clockInfo.rate >= 0.9 && clockInfo.rate <= 1.1, 'rate=' + clockInfo.rate);
+
+    await cdp.eval('window.__spicyDemo.seekTo(60000)');
+    const seeked = await waitFor(
+      async () => {
+        const pos = Number(await cdp.eval("document.documentElement.dataset.spicyPos || 0"));
+        return pos > 55000 ? pos : null;
+      },
+      { timeoutMs: 5000, description: 'seek applied' },
+    ).catch(() => null);
+    check('large jumps are treated as seeks, not jitter', !!seeked, seeked ? 'pos=' + Math.round(seeked) : 'timeout');
+
+    // ---------------------------------------------------------------------
+    // Phase 6: exact clock from the page's playback media element
+    // ---------------------------------------------------------------------
+    await cdp.send('Page.navigate', { url: `${server.url}/demo/index-real.html` });
+    await waitFor(async () => (await cdp.eval(STATUS_JS)).version, { timeoutMs: 15000, description: 'media-clock page' });
+    await waitFor(
+      async () => {
+        const s = await cdp.eval(STATUS_JS);
+        return s.status === 'ready' && s.mounted === '1';
+      },
+      { timeoutMs: 25000, description: 'media-clock lyrics' },
+    ).catch(() => null);
+    await sleep(1200);
+    const syncSrc = await cdp.eval("document.documentElement.dataset.spicySyncSrc || ''");
+    check('uses the playback media element as the clock when present', syncSrc === 'media', 'spicySyncSrc=' + (syncSrc || 'unset'));
+    const mediaDrift = await cdp.eval(`(() => {
+      const pos = Number(document.documentElement.dataset.spicyPos || 0);
+      const demo = window.__spicyDemo.state.pos;
+      return Math.round(Math.abs(pos - demo));
+    })()`);
+    check('media-element clock matches the player within 400ms', mediaDrift < 400, 'drift=' + mediaDrift + 'ms');
+
     check('no uncaught page errors', pageErrors.length === 0, pageErrors.slice(0, 4).join(' | ').slice(0, 300));
 
     const failed = results.filter((r) => !r.pass);

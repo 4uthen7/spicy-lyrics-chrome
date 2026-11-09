@@ -111,6 +111,17 @@ Spotify Web Player は、歌詞ビューを開いたときに `spclient.wg.spoti
 
 **bootstrap**: 歌詞データは Spotify の歌詞ビューを開いた時点で取得されるため、歌詞がまだ無い曲では 2.5 秒後に **Spotify 自身の歌詞ボタンを自動クリック**し、Spotify にリクエストさせてその応答を読み取ります（設定「Read Spotify lyrics automatically」でオフ可能）。ユーザーが何もしなくても、デフォルトの Spotify と同じデータで描画されます。
 
+### 同期クロック
+
+Web Player が返す再生位置は刻みが粗く（シークバーの隠し input はステップ更新、時計表示は秒単位）、その値を毎回そのままクロックに代入すると「毎ポーリングで少し戻る → 補間で進む」を繰り返し、カラオケが同じ場所でガクガクします。そこで:
+
+1. ページ内に**再生用のメディア要素**（`<audio>`/`<video>`、曲長一致・ループなし・DOM 位置と整合）があれば `currentTime` を**正確なクロック**として使用
+2. 無い場合は隠し range input / 時計表示を使い、**単調増加**を保証。前方へのズレのみ補正し、後方の小さな差は「量子化」として無視
+3. 1.5 秒を超える跳びだけをシークとして扱い、レンダラにスナップさせる
+4. 残差は最大 ±8% のレート補正で数秒かけて収束（位置を巻き戻さない）
+
+`Copy diagnostics` の `playback.clockSource` / `rate` / `clockSamples` で、どのクロックを使いどれだけズレていたかが分かります。曲ごとの微妙なズレは設定の Offset（±10ms 刻み、オーバーレイでは `↑`/`↓`、パネルに ±10 / ±100）で調整できます。
+
 ### パース
 
 - **color-lyrics v2**: `lines[].startTimeMs` / `endTimeMs`（文字列）、`words`、`syllables[{startTimeMs, endTimeMs, numChars}]`。`syncType` は実測で `LINE_SYNCED` / `SYLLABLE_SYNCED`。`syllables` があり `numChars` の合計が行テキスト長と一致すれば **word 同期**（Web Player 自身は音節を無視して行単位で描くため、payload に載っている場合のみ恩恵がある）、それ以外は **line 同期**、`UNSYNCED` は **static**。行間 4 秒以上のギャップは interlude 行として合成
@@ -145,7 +156,7 @@ Spotify Web Player は、歌詞ビューを開いたときに `spclient.wg.spoti
 | Show header | on | 曲情報ヘッダーの表示 |
 | Interlude dots | on | 間奏のドット |
 | Reduce motion | off | アニメーションを抑制 |
-| Offset | 0 ms | 歌詞タイミング補正（±2000ms、↑↓ で 100ms） |
+| Offset | 0 ms | 歌詞タイミング補正（±2000ms、10ms 刻み。↑↓ は 100ms、パネルは ±10/±100） |
 | Text size | 1.00x | 歌詞サイズ |
 | Line spacing | 1.00x | 行間 |
 | Background blur / dim | 90px / 0.48 | 背景のぼかしと暗さ |
@@ -170,11 +181,11 @@ node tools/build.mjs            # dist/prod + dist/spicy-lyrics-chrome-<ver>.zip
 node tools/build.mjs --target dev   # dist/dev（デモ用ホスト権限つき）
 node tools/test-lyrics.mjs      # パーサ/スニファのユニットテスト（19 件）
 node tools/serve.mjs --port 8787    # デモ用 Spotify モック（http://127.0.0.1:8787/demo/）
-node tools/e2e.mjs              # 実 Chrome に拡張をロードして 35 項目を検証
+node tools/e2e.mjs              # 実 Chrome に拡張をロードして 41 項目を検証
 node tools/verify-prod.mjs      # prod パッケージを実 Chrome でロードして 10 項目を検証
 ```
 
-`tools/e2e.mjs` は Chrome for Testing（`/tmp/cft/...`、`CHROME_BIN` で指定可）に `dist/dev` を実際にロードし、2 種類のモックページを操作して 35 項目を検証、スクリーンショットを `docs/screenshots/` に保存する。結果は `35/35 checks passed`。
+`tools/e2e.mjs` は Chrome for Testing（`/tmp/cft/...`、`CHROME_BIN` で指定可）に `dist/dev` を実際にロードし、2 種類のモックページを操作して 41 項目を検証、スクリーンショットを `docs/screenshots/` に保存する。結果は `41/41 checks passed`。
 
 - `demo/`（従来型 DOM）: content script 起動、プレイヤー状態、bootstrap による歌詞読み取り、word 同期、マウント、単語塗りの進行、ライン同期、歌詞なし、ランチャー、設定パネル、ポップアップ、パネル/ミニマルモード、ページ例外ゼロ
 - `demo/index-real.html`（2026 ビルドの実 DOM 形状）: `/track/` リンクが無い状態からの sniff による track id 昇格、隠し `<input type=range>` からの再生位置、`lyrics-line` のユニーククラストークン、`.main-view-container` クラスへの追従
@@ -234,6 +245,7 @@ tools/                        ビルド・テスト・e2e・アセット生成�
 - オフセットは ±20 秒まで、キャッシュは 240 曲まで
 - 動画背景はページ内に表示中の `<video>`（音楽ビデオ・ビデオポッドキャスト）がある場合のみ。無ければアルバムアート背景にフォールバックする
 - 認証済みセッションでの実再生は未検証（MediaSession / DOM / モックでの検証）。検出できない場合はポップアップの Copy diagnostics で原因を特定できる
+- 再生用メディア要素が DOM に無いビルドではシークバー由来のクロックを使うため、最大で 1 ステップ分（数百 ms）の遅れが出ることがある。Offset で詰められる
 
 ## リポジトリ
 

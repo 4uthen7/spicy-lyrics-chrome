@@ -207,7 +207,9 @@
       '<div class="sl-offset-row"><span class="sl-toggle-label">Sync offset</span>' +
       '<div class="sl-offset-ctrl">' +
       '<button type="button" class="sl-mini" data-offset="-100" aria-label="Offset lyrics 100 milliseconds earlier">−100</button>' +
+      '<button type="button" class="sl-mini" data-offset="-10" aria-label="Offset lyrics 10 milliseconds earlier">−10</button>' +
       '<span class="sl-offset-value" data-value="offsetMs"></span>' +
+      '<button type="button" class="sl-mini" data-offset="10" aria-label="Offset lyrics 10 milliseconds later">+10</button>' +
       '<button type="button" class="sl-mini" data-offset="100" aria-label="Offset lyrics 100 milliseconds later">+100</button>' +
       '</div></div>' +
       '</div>' +
