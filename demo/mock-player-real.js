@@ -78,6 +78,9 @@
   // ?no-media-clock=1 removes the playback element so the seek-bar clock path is
   // exercised instead (the real client may keep its element detached).
   const MEDIA_CLOCK = !params.has('no-media-clock');
+  // ?freeze-dom=1 simulates a build whose seek bar stops updating: the visual
+  // bar keeps moving but the hidden range input stays at its first value.
+  const FREEZE_DOM = params.has('freeze-dom');
 
   const state = {
     index: 0,
@@ -130,9 +133,12 @@
     el.seekRange.max = String(t.duration);
     const quantum = COARSE_MS > 0 ? COARSE_MS : 1;
     const quantised = COARSE_MS > 0 ? Math.floor(state.pos / quantum) * quantum : Math.round(state.pos);
-    if (force || quantised !== state.lastRangeValue) {
-      el.seekRange.value = String(quantised);
-      state.lastRangeValue = quantised;
+    if (!FREEZE_DOM || state.rangeWrites === 0) {
+      if (force || quantised !== state.lastRangeValue) {
+        el.seekRange.value = String(quantised);
+        state.lastRangeValue = quantised;
+        state.rangeWrites = (state.rangeWrites || 0) + 1;
+      }
     }
     el.seekRange.setAttribute('aria-valuetext', clock(state.pos) + '/' + clock(t.duration));
     // Visual bar driven by the CSS custom property the player uses.

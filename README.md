@@ -184,11 +184,11 @@ node tools/build.mjs            # dist/prod + dist/spicy-lyrics-chrome-<ver>.zip
 node tools/build.mjs --target dev   # dist/dev（デモ用ホスト権限つき）
 node tools/test-lyrics.mjs      # パーサ/スニファのユニットテスト（19 件）
 node tools/serve.mjs --port 8787    # デモ用 Spotify モック（http://127.0.0.1:8787/demo/）
-node tools/e2e.mjs              # 実 Chrome に拡張をロードして 48 項目を検証
+node tools/e2e.mjs              # 実 Chrome に拡張をロードして 50 項目を検証
 node tools/verify-prod.mjs      # prod パッケージを実 Chrome でロードして 10 項目を検証
 ```
 
-`tools/e2e.mjs` は Chrome for Testing（`/tmp/cft/...`、`CHROME_BIN` で指定可）に `dist/dev` を実際にロードし、2 種類のモックページと固定時刻の描画ラボを操作して 48 項目を検証、スクリーンショットを `docs/screenshots/` に保存する。結果は `48/48 checks passed`。
+`tools/e2e.mjs` は Chrome for Testing（`/tmp/cft/...`、`CHROME_BIN` で指定可）に `dist/dev` を実際にロードし、2 種類のモックページと固定時刻の描画ラボを操作して 50 項目を検証、スクリーンショットを `docs/screenshots/` に保存する。結果は `50/50 checks passed`。
 
 - `demo/`（従来型 DOM）: content script 起動、プレイヤー状態、bootstrap による歌詞読み取り、word 同期、マウント、単語塗りの進行、ライン同期、歌詞なし、ランチャー、設定パネル、ポップアップ、パネル/ミニマルモード、ページ例外ゼロ
 - `demo/index-real.html`（2026 ビルドの実 DOM 形状）: `/track/` リンクが無い状態からの sniff による track id 昇格、隠し `<input type=range>` からの再生位置、`lyrics-line` のユニーククラストークン、`.main-view-container` クラスへの追従

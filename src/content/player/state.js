@@ -185,6 +185,10 @@
     lastDomValue: null,
     nativeLineKey: null,
     nativeLineSeen: 0,
+    staleBackward: 0,
+    lastSeekRaw: null,
+    backSeeks: 0,
+    lastBackKey: null,
   };
 
   /** Jump beyond this is a real seek (or a badly desynced clock), not jitter. */
@@ -974,6 +978,19 @@
     if (!info || info.matches !== 1) return;
     const now = store.positionNow();
     const delta = info.start - now;
+    // Backward correction only when the clock has actually passed the NEXT
+    // line's start while Spotify still highlights this one (a real seek, or a
+    // badly ahead clock). Comparing against the line's own start fired 1.2 s
+    // into every line and rewound the lyrics mid-line.
+    if (info.nextStart != null && now > info.nextStart + 150 && now - info.start < 8000) {
+      const key = info.start + ':' + active.text;
+      if (diag.lastBackKey === key) return;
+      diag.lastBackKey = key;
+      diag.backSeeks += 1;
+      store.setPlayback(info.start + 40, true, { seek: true });
+      return;
+    }
+    diag.lastBackKey = null;
     // Keep the hop bounded so a very short line cannot leap several rows.
     if (delta <= 20 || delta > 450) return;
     store.setPlayback(info.start + 40, true, { exact: true });
@@ -989,20 +1006,29 @@
     }
     const durationMs = reading.durationMs || undefined;
     const domMs = reading.positionMs;
+    // Raw readings are tracked on every sample (including ones that return
+    // early below); a stale baseline made a later sample look like a seek.
+    const previousRaw = diag.lastSeekRaw;
+    diag.lastSeekRaw = domMs;
+    const rawJump = previousRaw == null ? 0 : domMs - previousRaw;
     noteDomStep(domMs);
     const predicted = store.positionNow();
     const error = domMs - predicted;
 
     if (!isPlaying) {
-      // Paused: the DOM value is the truth. Only call a big delta a seek.
-      const seek = Math.abs(error) > HARD_JUMP_MS;
-      store.setPlayback(domMs, false, { durationMs, seek, exact: !seek });
+      // Paused: take the DOM value as a floor, but never move the clock back
+      // and never turn this into a seek. A stale seek-bar reading while paused
+      // used to rewind the lyrics.
+      const target = Math.max(domMs, predicted);
+      store.setPlayback(target, false, { durationMs, exact: true });
       noteClock(domMs, predicted, store.positionNow(), error, 1, reading.precise);
       return;
     }
 
-    if (Math.abs(error) > HARD_JUMP_MS) {
-      // Real seek (or the tab was suspended): snap and let the renderer catch up.
+    if (error > HARD_JUMP_MS) {
+      // A forward jump means the user clicked ahead in the track (or the tab was
+      // suspended). Backward readings are deliberately NOT treated as seeks:
+      // a stale quantised sample is not a seek and used to rewind the lyrics.
       diag.seeks += 1;
       store.setPlayback(domMs, true, { durationMs, seek: true });
       noteClock(domMs, predicted, store.positionNow(), error, 1, reading.precise);
@@ -1013,6 +1039,17 @@
     // be used as a *lower bound* on playback. Never set the clock back to it
     // (that was the source of the backward steps). Pull forward when the sample
     // is ahead of the clock; otherwise free-run at 1x until the next sample.
+    // Backward seek fallback for when the native view is closed: only a
+    // *discrete* drop of the raw reading (a real click) counts. A stale or
+    // slowly advancing sample never drops, so it can no longer rewind lyrics.
+    if (error < -HARD_JUMP_MS && rawJump < -1000) {
+      diag.seeks += 1;
+      diag.backSeeks += 1;
+      store.setPlayback(domMs, true, { durationMs, seek: true });
+      noteClock(domMs, predicted, store.positionNow(), error, 1, reading.precise);
+      return;
+    }
+    if (error < -HARD_JUMP_MS) diag.staleBackward += 1;
     const domChanged = diag.lastDomValue !== domMs;
     diag.lastDomValue = domMs;
     if (error > 5) {
@@ -1108,7 +1145,9 @@
     );
     if (mediaClock) reading = mediaClock;
     diag.clockSource = reading ? reading.source || 'dom' : 'none';
-    const isPlaying = resolvePlaying(labelPlaying != null ? labelPlaying : mediaPlaying, reading ? reading.positionMs : null);
+    // MediaSession.playbackState is an explicit statement from the player and
+    // does not depend on how fresh the seek bar is; prefer it over icon heuristics.
+    const isPlaying = resolvePlaying(mediaPlaying != null ? mediaPlaying : labelPlaying, reading ? reading.positionMs : null);
     applyPlayback(reading, isPlaying);
     if (isPlaying) anchorToNativeLine();
     if (store.get().playback.source !== (diag.clockSource || 'none')) {
@@ -1396,6 +1435,8 @@
         rate: Number((state.playback.rate || 1).toFixed(4)),
         clockSource: diag.clockSource || 'none',
         seeks: diag.seeks,
+        backSeeks: diag.backSeeks,
+        staleBackward: diag.staleBackward,
         anchors: diag.anchors,
         domStepMs: (() => {
           const steps = diag.domSteps.map((x) => x.step).filter((v) => v > 0);

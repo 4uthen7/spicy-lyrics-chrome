@@ -55,6 +55,8 @@ try {
     if (msg.method === 'Runtime.exceptionThrown') errors.push(msg.params.exceptionDetails.text);
   });
   await cdp.enable(['Runtime', 'Page', 'Log']);
+  await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true }).catch(() => {});
+  await cdp.send('Page.bringToFront').catch(() => {});
 
   await cdp.send('Page.navigate', { url: `${server.url}/demo/` });
   await waitFor(async () => cdp.eval('!!window.__spicyDemo'), { timeoutMs: 10000, description: 'demo boot' });

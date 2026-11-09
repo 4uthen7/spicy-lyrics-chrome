@@ -798,6 +798,83 @@ async function main() {
     })()`);
     check('media-element clock matches the player within 400ms', mediaDrift < 400, 'drift=' + mediaDrift + 'ms');
 
+    // ---------------------------------------------------------------------
+    // A frozen seek bar must not rewind or stall the lyrics
+    // ---------------------------------------------------------------------
+    await cdp.send('Page.navigate', { url: `${server.url}/demo/index-real.html?freeze-dom=1&no-media-clock=1` });
+    await waitFor(async () => (await cdp.eval(STATUS_JS)).version, { timeoutMs: 15000, description: 'frozen-dom page' });
+    await waitFor(
+      async () => {
+        const s = await cdp.eval(STATUS_JS);
+        return s.status === 'ready' && s.mounted === '1';
+      },
+      { timeoutMs: 25000, description: 'frozen-dom lyrics' },
+    ).catch(() => null);
+    const frozenStart = Number(await cdp.eval("document.documentElement.dataset.spicyPos || 0"));
+    const frozenTrail = [];
+    for (let i = 0; i < 40; i++) {
+      frozenTrail.push(
+        await cdp.eval(`(() => {
+          const host = document.querySelector('#spicy-lyrics');
+          const sr = host && host.shadowRoot;
+          if (!sr) return -1;
+          const row = [...sr.querySelectorAll('.sl-row')].find((r) => r.dataset.level === '0');
+          return row && row.dataset.line != null ? Number(row.dataset.line) : -1;
+        })()`).catch(() => -1),
+      );
+      await sleep(150);
+    }
+    const frozenEnd = Number(await cdp.eval("document.documentElement.dataset.spicyPos || 0"));
+    const frozenLines = frozenTrail.filter((v) => v >= 0);
+    let frozenRewinds = 0;
+    let frozenStep = 0;
+    for (let i = 1; i < frozenLines.length; i++) {
+      const step = frozenLines[i] - frozenLines[i - 1];
+      if (step < 0) frozenRewinds += 1;
+      frozenStep = Math.max(frozenStep, step);
+    }
+    check(
+      'frozen seek bar does not rewind or stall the lyrics',
+      frozenRewinds === 0 && frozenStep <= 2 && frozenEnd - frozenStart > 3000 && frozenLines.length > 10,
+      `rewinds=${frozenRewinds} maxStep=${frozenStep} advanced=${Math.round(frozenEnd - frozenStart)}ms lines=${frozenLines.length}`,
+    );
+
+    // ---------------------------------------------------------------------
+    // A real backward seek must still rewind
+    // ---------------------------------------------------------------------
+    await cdp.send('Page.navigate', { url: `${server.url}/demo/index-real.html` });
+    await waitFor(
+      async () => {
+        const s = await cdp.eval(STATUS_JS);
+        return s.status === 'ready' && s.mounted === '1';
+      },
+      { timeoutMs: 25000, description: 'seek-back demo' },
+    ).catch(() => null);
+    await cdp.eval('window.__spicyDemo.seekTo(60000)');
+    await sleep(900);
+    const beforeBack = await cdp.eval(`(() => {
+      const sr = document.querySelector('#spicy-lyrics').shadowRoot;
+      const row = [...sr.querySelectorAll('.sl-row')].find((r) => r.dataset.level === '0');
+      return row && row.dataset.line != null ? Number(row.dataset.line) : -1;
+    })()`);
+    await cdp.eval('window.__spicyDemo.seekTo(15000)');
+    const backTarget = await waitFor(
+      async () => {
+        const idx = await cdp.eval(`(() => {
+          const sr = document.querySelector('#spicy-lyrics').shadowRoot;
+          const row = [...sr.querySelectorAll('.sl-row')].find((r) => r.dataset.level === '0');
+          return row && row.dataset.line != null ? Number(row.dataset.line) : -1;
+        })()`);
+        return idx >= 0 && idx <= 4 ? idx : null;
+      },
+      { timeoutMs: 4000, description: 'backward seek applied' },
+    ).catch(() => null);
+    check(
+      'a real backward seek rewinds the lyrics',
+      typeof backTarget === 'number' && beforeBack > backTarget + 2,
+      `before=${beforeBack} after=${backTarget}`,
+    );
+
     check('no uncaught page errors', pageErrors.length === 0, pageErrors.slice(0, 4).join(' | ').slice(0, 300));
 
     const failed = results.filter((r) => !r.pass);

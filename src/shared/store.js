@@ -200,8 +200,11 @@
     let seek = !!opts.seek;
     if (!seek && !opts.exact) {
       const delta = positionMs - prev;
-      // Only a real seek (or the clock being badly out of sync) re-bases hard.
-      if (delta < -1500 || delta > 2500) seek = true;
+      // Only a forward jump is auto-detected as a seek. A backward delta is
+      // almost always a stale quantised reading, not a user seek, and rewinding
+      // on it made finished lines replay; real backward seeks flow through the
+      // native lyric highlight anchor with explicit `seek: true`.
+      if (delta > 2500) seek = true;
     }
     let next = Math.max(0, positionMs);
     if (!seek && !opts.exact) {

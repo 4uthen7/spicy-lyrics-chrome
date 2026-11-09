@@ -4,6 +4,37 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] — 2026-11-09
+
+### Fixed
+
+- **Mid-line rewinds and line jumping (screen recording repro).** The native
+  highlight anchor's backward correction compared the clock against the
+  highlighted line's *start*. It therefore fired about 1.2 s into every line,
+  rewinding the position; the next DOM sample then pulled it forward again. The
+  result was the visible back-and-forth between lines, repeated lines and the
+  occasional jump. The backward correction now only fires when the clock has
+  passed the *next* line's start while Spotify still highlights the current one,
+  which is a real seek (or a badly ahead clock), not mid-line drift.
+- Stale/quantised backward seek-bar samples are no longer treated as seeks at
+  all; only a discrete backward drop of the raw reading (>1 s in one sample)
+  counts, so a frozen or lagging seek bar cannot rewind the lyrics.
+- Pausing no longer seeks or moves the clock backwards.
+- Play/pause state prefers `navigator.mediaSession.playbackState` over icon
+  heuristics, so a stale seek bar cannot make the renderer think playback paused.
+- Status mirroring no longer depends solely on `requestAnimationFrame`: a hidden
+  or occluded tab throttles rAF to zero, which made the version/status dataset
+  (and the popup's support info) disappear. A 250 ms fallback writes the same
+  snapshot. Production smoke test now focuses the page before asserting.
+- The demo harness now exposes a compact clock diagnostic snapshot
+  (`data-spicy-diag`, 127.0.0.1/localhost only) used to trace this bug.
+
+### Verification
+
+- e2e: 50/50, including a frozen seek-bar scenario (no rewinds, clock keeps
+  advancing), line progression over 9 s (no backward steps, max one line) and a
+  real backward seek (rewinds from line 13 to line 3).
+
 ## [1.2.2] — 2026-11-09
 
 ### Fixed

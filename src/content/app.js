@@ -10,7 +10,7 @@
   const SL = globalThis.SL;
   if (!SL || !SL.store || SL.app) return;
 
-  const VERSION = '1.2.2';
+  const VERSION = '1.2.3';
   const LOG = (...args) => console.log('[spicy]', ...args);
 
   const HOST_SELECTORS = {
@@ -340,7 +340,10 @@
   function mirrorStatus() {
     if (mirrorQueued) return;
     mirrorQueued = true;
-    requestAnimationFrame(() => {
+    let done = false;
+    const write = () => {
+      if (done) return;
+      done = true;
       mirrorQueued = false;
       const state = SL.store.get();
       const root = document.documentElement;
@@ -360,7 +363,11 @@
       root.dataset.spicyKey = state.track.key || '';
       if (state.lyrics && state.lyrics.lines) root.dataset.spicyLines = String(state.lyrics.lines.length);
       else delete root.dataset.spicyLines;
-    });
+    };
+    // requestAnimationFrame is throttled to zero in hidden/occluded tabs; the
+    // status mirror must still be observable (popup support, harness checks).
+    requestAnimationFrame(write);
+    setTimeout(write, 250);
   }
 
   // ---------------------------------------------------------------------------
@@ -526,6 +533,8 @@
 
     let lastMountCheck = 0;
     let lastPosMirror = 0;
+    let lastDiagMirror = 0;
+    const DEMO_HOST = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
     const loop = () => {
       const now = performance.now();
       if (now - lastMountCheck > 120) {
@@ -543,6 +552,23 @@
           root.dataset.spicyRate = Number(playback.rate || 1).toFixed(3);
           root.dataset.spicySyncSrc = playback.source || 'none';
           root.dataset.spicyAnchors = String(playback.anchors || 0);
+          // The demo harness gets a compact clock diagnostic snapshot; on
+          // Spotify the same data is only available through the popup report.
+          if (DEMO_HOST && now - lastDiagMirror > 500 && SL.player && typeof SL.player.diagnostics === 'function') {
+            lastDiagMirror = now;
+            const clockDiag = SL.player.diagnostics();
+            const pb = clockDiag.playback || {};
+            root.dataset.spicyDiag = JSON.stringify({
+              pos: pb.positionMs,
+              rate: pb.rate,
+              source: pb.clockSource,
+              anchors: pb.anchors,
+              seeks: pb.seeks,
+              backSeeks: pb.backSeeks,
+              staleBackward: pb.staleBackward,
+              samples: (pb.clockSamples || []).slice(-3),
+            });
+          }
         }
       }
       requestAnimationFrame(loop);
