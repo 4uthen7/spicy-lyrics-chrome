@@ -180,6 +180,9 @@
     domSteps: [],
     rate: 1,
     seeks: 0,
+    anchors: 0,
+    lastDomValue: null,
+    nativeLineKey: null,
   };
 
   /** Jump beyond this is a real seek (or a badly desynced clock), not jitter. */
@@ -854,6 +857,85 @@
     return lastPlaying;
   }
 
+  /**
+   * The native lyrics view highlights its own active line from Spotify's
+   * internal, un-quantised playback position. While that view exists behind the
+   * overlay it is a free, high-quality sync anchor: when Spotify moves to a new
+   * line we know playback has just crossed that line's start time, so the
+   * extension clock can be pulled forward instead of waiting for the coarse
+   * seek bar to catch up. This is what stops line changes from running late and
+   * the drift that accumulates from them.
+   */
+  function nativeActiveLine() {
+    if (typeof document === 'undefined') return null;
+    let nodes;
+    try {
+      nodes = document.querySelectorAll('[data-testid="lyrics-line"]');
+    } catch (err) {
+      return null;
+    }
+    if (!nodes.length) return null;
+    const counts = new Map();
+    for (const node of nodes) {
+      for (const token of node.classList) counts.set(token, (counts.get(token) || 0) + 1);
+    }
+    for (const node of nodes) {
+      let active = false;
+      for (const token of node.classList) {
+        if (counts.get(token) === 1) {
+          active = true;
+          break;
+        }
+      }
+      if (active) {
+        return { text: util.cleanText(node.textContent || ''), key: util.cleanText(node.textContent || '') };
+      }
+    }
+    return null;
+  }
+
+  /** Maps the native view's active line text onto the resolved doc's lines. */
+  function lineStartForText(text) {
+    const lyrics = store.get().lyrics;
+    if (!lyrics || !Array.isArray(lyrics.lines) || !text) return null;
+    const wanted = text.toLowerCase().replace(/\s+/g, '');
+    if (!wanted) return null;
+    for (const line of lyrics.lines) {
+      if (!line || line.isInterlude) continue;
+      const own = String(line.text || '').toLowerCase().replace(/\s+/g, '');
+      if (own && (own === wanted || own.includes(wanted) || wanted.includes(own))) {
+        const start = Number(line.startMs);
+        if (isFinite(start) && start > 0) return start;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Pulls the clock forward when Spotify's own lyric view advances. Never moves
+   * it backwards: if the extension clock is already at or past that line, the
+   * anchor is ignored.
+   */
+  function anchorToNativeLine() {
+    if (!isNativeLyricsOpen()) {
+      diag.nativeLineKey = null;
+      return;
+    }
+    const active = nativeActiveLine();
+    if (!active) return;
+    if (active.key === diag.nativeLineKey) return;
+    diag.nativeLineKey = active.key;
+    const start = lineStartForText(active.text);
+    if (start == null) return;
+    const now = store.positionNow();
+    // Only a forward correction inside one line's length; a larger jump would
+    // mean the line mapping picked the wrong row, so ignore it.
+    if (start <= now + 20 || start - now > 1500) return;
+    store.setPlayback(start, true, { exact: true });
+    diag.anchors += 1;
+    store.patch({ playback: { anchors: diag.anchors } });
+  }
+
   function applyPlayback(reading, isPlaying) {
     if (!reading) {
       // No progress DOM at all: still publish the play/pause toggle state.
@@ -882,24 +964,21 @@
       return;
     }
 
-    if (error > ALIGN_DEADBAND_MS) {
-      // The DOM is ahead of the interpolated clock: pull the clock forward
-      // without flagging a seek, so the renderer glides instead of snapping.
+    // The DOM value is quantised: it is stale between updates, so it may only
+    // be used as a *lower bound* on playback. Never set the clock back to it
+    // (that was the source of the backward steps). Pull forward when the sample
+    // is ahead of the clock; otherwise free-run at 1x until the next sample.
+    const domChanged = diag.lastDomValue !== domMs;
+    diag.lastDomValue = domMs;
+    if (error > 5) {
+      // Sample is ahead of the clock: anchor forward. Native line anchors can
+      // make this a large, non-seek correction; the renderer glides to it.
       store.setPlayback(domMs, true, { durationMs, exact: true });
       noteClock(domMs, predicted, store.positionNow(), error, 1, reading.precise);
       return;
     }
-
-    // Usual case: the DOM reading is quantised and therefore behind (or equal
-    // to) the interpolated clock. Keep the clock where it is and trim its rate
-    // so it converges on the DOM without ever stepping backwards. This is what
-    // removes the classic "highlight jumps back every poll" jitter.
-    const rate =
-      Math.abs(error) < ALIGN_DEADBAND_MS
-        ? 1
-        : util.clamp(1 + error / 4000, 1 - MAX_RATE_TRIM, 1 + MAX_RATE_TRIM);
-    store.setPlayback(predicted, true, { durationMs, exact: true, rate });
-    noteClock(domMs, predicted, store.positionNow(), error, rate, reading.precise);
+    store.setPlayback(predicted, true, { durationMs, exact: true, rate: 1 });
+    noteClock(domMs, predicted, store.positionNow(), error, 1, reading.precise);
   }
 
   function pollOnce() {
@@ -986,6 +1065,7 @@
     diag.clockSource = reading ? reading.source || 'dom' : 'none';
     const isPlaying = resolvePlaying(labelPlaying != null ? labelPlaying : mediaPlaying, reading ? reading.positionMs : null);
     applyPlayback(reading, isPlaying);
+    if (isPlaying) anchorToNativeLine();
     if (store.get().playback.source !== (diag.clockSource || 'none')) {
       store.patch({ playback: { source: diag.clockSource || 'none' } });
     }
@@ -1260,6 +1340,13 @@
         rate: Number((state.playback.rate || 1).toFixed(4)),
         clockSource: diag.clockSource || 'none',
         seeks: diag.seeks,
+        anchors: diag.anchors,
+        domStepMs: (() => {
+          const steps = diag.domSteps.map((x) => x.step).filter((v) => v > 0);
+          if (!steps.length) return 0;
+          steps.sort((a, b) => a - b);
+          return steps[Math.floor(steps.length / 2)];
+        })(),
         clockSamples: diag.clockSamples.slice(-10),
         domSteps: diag.domSteps.slice(-10).map((s) => s.step),
         offsetMs: (state.settings && state.settings.offsetMs) || 0,

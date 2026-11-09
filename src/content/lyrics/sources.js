@@ -455,6 +455,35 @@
     }
   }
 
+  // If a resolve finishes empty while Spotify's lyric view is (or becomes) open,
+  // try again shortly: the panel renders asynchronously and the player's own
+  // request may land just after we gave up. Bounded per track so a genuinely
+  // lyric-less track does not poll forever.
+  const emptyRetries = new Map();
+  let emptyRetryTimer = 0;
+
+  function scheduleEmptyRetry(trackId, seq) {
+    if (typeof setTimeout !== 'function' || !trackId) return;
+    const attempts = emptyRetries.get(trackId) || 0;
+    if (attempts >= 5) return;
+    emptyRetries.set(trackId, attempts + 1);
+    if (emptyRetryTimer) clearTimeout(emptyRetryTimer);
+    emptyRetryTimer = setTimeout(() => {
+      emptyRetryTimer = 0;
+      if (!attached) return;
+      const state = store.get();
+      if (resolutionKey(state.track) !== trackId) return;
+      if (state.lyricsStatus !== 'empty') return;
+      const nativeOpen = nativeLyricsOpenNow();
+      if (!nativeOpen) {
+        // The autoFetch bootstrap may still open the view; keep watching.
+        scheduleEmptyRetry(trackId, seq);
+        return;
+      }
+      resolve(trackId, { force: true }).catch(() => {});
+    }, 1200);
+  }
+
   async function resolve(trackId, opts) {
     const options = opts || {};
     const seq = ++resolveSeq;
@@ -559,6 +588,7 @@
         }
         store.setLyrics(null);
         store.setLyricsStatus('empty');
+        scheduleEmptyRetry(trackId, seq);
       }
       return null;
     })();
@@ -598,6 +628,11 @@
     const trackId = resolutionKey(state.track);
     if (trackId !== currentTrackId) {
       currentTrackId = trackId;
+      emptyRetries.clear();
+      if (emptyRetryTimer) {
+        clearTimeout(emptyRetryTimer);
+        emptyRetryTimer = 0;
+      }
       currentTrackObservedAt = Date.now();
       if (!trackId) {
         resolveSeq += 1;

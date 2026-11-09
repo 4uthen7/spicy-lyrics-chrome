@@ -4,6 +4,45 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-11-09
+
+Visuals and line transitions now follow the desktop Spicy Lyrics / Beautiful
+Lyrics sources (upstream repos, see `docs/reference-spicy-beautiful.md`).
+
+### Fixed
+
+- **Line transitions no longer feel slow / "last line shows again".** Line focus
+  transitions were 0.5 s; the outgoing line stayed visible while the next one
+  brightened. Opacity/blur now settle in 0.18-0.2 s, the active line is promoted
+  immediately, and the scroll spring was stiffened (settle ~300 ms instead of
+  ~500 ms).
+- **Clock is anchored to Spotify's own lyric highlight.** When the native lyrics
+  view (opened by the bootstrap) advances a line, the extension clock is pulled
+  forward to that line's start time, so line changes no longer wait for the
+  quantised seek bar. Bounded to one line length and never backwards.
+- Seek-bar readings are now only used as a lower bound: the clock never steps
+  backwards on a stale sample, and an unchanged sample leaves the clock alone
+  instead of dragging it back.
+
+### Added
+
+- **Soft karaoke sweep** ported from Spicy Lyrics: a 2x-wide dim→bright gradient
+  with a fade band slides across each word, instead of a hard background-size cut.
+- **Per-syllable bounce** ported from Spicy's animator splines: scale
+  0.95→1.05→1, a small upward kick and a glow that blooms as the syllable is sung
+  (`--ws`, `--wy`, `--wb`, `--wo` per word).
+- Simple mode gets the wider fade and stronger contrast used by Spicy's simple
+  renderer.
+- Diagnostics expose the clock source, anchor count and recent clock samples.
+- `docs/reference-spicy-beautiful.md` documents every ported constant and file.
+
+### Verification
+
+- e2e: 44/44 checks, including a deterministic render-lab check of the syllable
+  bounce (`--ws 1.041`, `--wy -0.0083em`, glow 14 px at a frozen position), native
+  highlight anchors (>=1 per sampled window) and monotonic clock under a
+  one-second-quantised position source.
+
 ## [1.1.1] — 2026-11-09
 
 Karaoke highlight no longer drifts backwards or jitters around the same spot.

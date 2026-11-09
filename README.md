@@ -19,6 +19,7 @@ Spotify Web Player がデフォルトで取得・表示している歌詞をそ�
 - 再生中の曲を **Spotify 純正のデータだけ**から判定（MediaSession ＋ プレイヤーバー DOM ＋ ページタイトル。サードパーティの歌詞 API は使わない）
 - Spotify の歌詞ページを開くと、自動で Spicy の歌詞ページに置き換わる（メイン領域全体 / 右サイドバーの 2 モード）
 - **単語単位のカラオケ塗り**（Spotify の color-lyrics payload に音節タイミングがある曲）。無い曲は行単位で塗る
+- デスクトップ版準拠の**ソフトな塗りスイープ**と**音節ごとのバウンス/グロー**（Spicy Lyrics の animator から移植）
 - **3 つの歌詞モーション**: Cinema（スプリング追従）/ Flow（境界で止まらない連続スクロール）/ Simple（フラットで読みやすい）
 - **6 種類の背景**: アルバムアートぼかし / ジャケット＋反射 / パレットグロー / 単色 / **ページ内の動画をミラー** / カスタム画像
 - 間奏はドットアニメーション（4 秒以上のギャップを検出）
@@ -116,11 +117,13 @@ Spotify Web Player は、歌詞ビューを開いたときに `spclient.wg.spoti
 Web Player が返す再生位置は刻みが粗く（シークバーの隠し input はステップ更新、時計表示は秒単位）、その値を毎回そのままクロックに代入すると「毎ポーリングで少し戻る → 補間で進む」を繰り返し、カラオケが同じ場所でガクガクします。そこで:
 
 1. ページ内に**再生用のメディア要素**（`<audio>`/`<video>`、曲長一致・ループなし・DOM 位置と整合）があれば `currentTime` を**正確なクロック**として使用
-2. 無い場合は隠し range input / 時計表示を使い、**単調増加**を保証。前方へのズレのみ補正し、後方の小さな差は「量子化」として無視
-3. 1.5 秒を超える跳びだけをシークとして扱い、レンダラにスナップさせる
-4. 残差は最大 ±8% のレート補正で数秒かけて収束（位置を巻き戻さない）
+2. **Spotify 自身の歌詞ハイライト**（bootstrap で開いた歌詞ビュー）が次の行へ進んだ瞬間、その行の開始時刻までクロックを前方補正。行送りがシークバーの量子化を待たない
+3. シークバーの読みは**下限**としてのみ使用。古い値を代入して巻き戻さない（不変ならクロックはそのまま 1x で進む）
+4. 1.5 秒を超える跳びだけをシークとして扱い、レンダラにスナップさせる
 
-`Copy diagnostics` の `playback.clockSource` / `rate` / `clockSamples` で、どのクロックを使いどれだけズレていたかが分かります。曲ごとの微妙なズレは設定の Offset（±10ms 刻み、オーバーレイでは `↑`/`↓`、パネルに ±10 / ±100）で調整できます。
+行の切り替えは視線より遅れないよう、非アクティブ行の減光・ブラーは 0.18〜0.2 秒、スクロールのスプリングは約 300ms で収束します（以前は 0.5 秒）。
+
+`Copy diagnostics` の `playback.clockSource` / `rate` / `anchors` / `clockSamples` で、どのクロックを使い何回アンカーしたか、どれだけズレていたかが分かります。曲ごとの微妙なズレは設定の Offset（±10ms 刻み、オーバーレイでは `↑`/`↓`、パネルに ±10 / ±100）で調整できます。
 
 ### パース
 
@@ -181,16 +184,17 @@ node tools/build.mjs            # dist/prod + dist/spicy-lyrics-chrome-<ver>.zip
 node tools/build.mjs --target dev   # dist/dev（デモ用ホスト権限つき）
 node tools/test-lyrics.mjs      # パーサ/スニファのユニットテスト（19 件）
 node tools/serve.mjs --port 8787    # デモ用 Spotify モック（http://127.0.0.1:8787/demo/）
-node tools/e2e.mjs              # 実 Chrome に拡張をロードして 41 項目を検証
+node tools/e2e.mjs              # 実 Chrome に拡張をロードして 44 項目を検証
 node tools/verify-prod.mjs      # prod パッケージを実 Chrome でロードして 10 項目を検証
 ```
 
-`tools/e2e.mjs` は Chrome for Testing（`/tmp/cft/...`、`CHROME_BIN` で指定可）に `dist/dev` を実際にロードし、2 種類のモックページを操作して 41 項目を検証、スクリーンショットを `docs/screenshots/` に保存する。結果は `41/41 checks passed`。
+`tools/e2e.mjs` は Chrome for Testing（`/tmp/cft/...`、`CHROME_BIN` で指定可）に `dist/dev` を実際にロードし、2 種類のモックページと固定時刻の描画ラボを操作して 44 項目を検証、スクリーンショットを `docs/screenshots/` に保存する。結果は `44/44 checks passed`。
 
 - `demo/`（従来型 DOM）: content script 起動、プレイヤー状態、bootstrap による歌詞読み取り、word 同期、マウント、単語塗りの進行、ライン同期、歌詞なし、ランチャー、設定パネル、ポップアップ、パネル/ミニマルモード、ページ例外ゼロ
 - `demo/index-real.html`（2026 ビルドの実 DOM 形状）: `/track/` リンクが無い状態からの sniff による track id 昇格、隠し `<input type=range>` からの再生位置、`lyrics-line` のユニーククラストークン、`.main-view-container` クラスへの追従
 - `demo/index-real.html?no-dom-track=1`: プレイヤーバーからタイトル testid を消し document.title もシェル名にした状態で、MediaSession だけで曲を検出して描画できること
-- 背景 6 種と歌詞モード 3 種、動画ミラー（`spicyVideo=mirror`）、ポップアップの診断メッセージ（実 content script とのやり取り）
+- 1 秒量子化したシークバー（`?coarse=1000&no-media-clock=1`）でもクロックが後退せず、行送りが遅れないこと
+- 背景 6 種と歌詞モード 3 種、動画ミラー（`spicyVideo=mirror`）、音節バウンス、ポップアップの診断メッセージ（実 content script とのやり取り）
 
 ![2026 build DOM shape](docs/screenshots/e2e-2026-dom.png)
 
@@ -252,6 +256,8 @@ tools/                        ビルド・テスト・e2e・アセット生成�
 - 不具合報告・要望: [Issues](https://github.com/4uthen7/spicy-lyrics-chrome/issues)
 - 変更履歴: [CHANGELOG.md](CHANGELOG.md)
 - 設計メモ: [docs/spotify-webplayer-notes.md](docs/spotify-webplayer-notes.md)
+- デスクトップ版との対応（移植した定数と参照元）: [docs/reference-spicy-beautiful.md](docs/reference-spicy-beautiful.md)
+- 参照実装: [Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics) / [Beautiful Lyrics](https://github.com/surfbryce/beautiful-lyrics)
 
 ## ライセンス
 

@@ -10,7 +10,7 @@
   const SL = globalThis.SL;
   if (!SL || !SL.store || SL.app) return;
 
-  const VERSION = '1.1.1';
+  const VERSION = '1.2.0';
   const LOG = (...args) => console.log('[spicy]', ...args);
 
   const HOST_SELECTORS = {
@@ -542,6 +542,7 @@
           const playback = SL.store.get().playback;
           root.dataset.spicyRate = Number(playback.rate || 1).toFixed(3);
           root.dataset.spicySyncSrc = playback.source || 'none';
+          root.dataset.spicyAnchors = String(playback.anchors || 0);
         }
       }
       requestAnimationFrame(loop);

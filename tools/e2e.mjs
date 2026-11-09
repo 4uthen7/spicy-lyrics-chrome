@@ -216,6 +216,65 @@ async function main() {
       shot2.pSample.some((p) => p > 0);
     check('karaoke fill advances with playback', advanced, 'p=' + JSON.stringify(shot2.pSample.slice(0, 6)));
 
+
+    // Deterministic check of the per-syllable bounce on the frozen render lab:
+    // the live clock crosses word boundaries, so sampling it races the gaps.
+    await cdp.send('Page.navigate', { url: `${server.url}/demo/render-lab.html?t=26750&solo=1` });
+    await waitFor(
+      async () =>
+        cdp
+          .eval("!!(document.querySelector('#spicy-lyrics') && document.querySelector('#spicy-lyrics').shadowRoot && document.querySelector('#spicy-lyrics').shadowRoot.querySelectorAll('.sl-w').length > 5)")
+          .catch(() => false),
+      { timeoutMs: 15000, description: 'render lab words' },
+    ).catch(() => null);
+    await sleep(700); // let a couple of frames paint the bounce
+    const bounce = await cdp.eval(`(() => {
+      const host = document.querySelector('#spicy-lyrics');
+      const sr = host && host.shadowRoot;
+      if (!sr) return { found: false };
+      const words = [...sr.querySelectorAll('.sl-w')];
+      let animated = 0;
+      const levels = [];
+      for (const w of words) {
+        const style = w.getAttribute('style') || '';
+        const at = style.indexOf('--ws:');
+        if (at === -1) continue;
+        const value = parseFloat(style.slice(at + 5));
+        if (!Number.isFinite(value)) continue;
+        if (Math.abs(value - 1) > 0.001) {
+          animated += 1;
+          if (levels.length < 4) levels.push({ ws: value, style: style.split(';').join(' | ') });
+        }
+      }
+      const active = [...sr.querySelectorAll('.sl-row')].find((r) => r.dataset.level === '0');
+      const activeWords = active ? [...active.querySelectorAll('.sl-w')] : [];
+      return {
+        found: true,
+        animated,
+        levels,
+        activeText: active ? active.textContent.slice(0, 40) : null,
+        activeWords: activeWords.length,
+        sampleStyles: activeWords.slice(0, 3).map((w) => (w.getAttribute('style') || '').split(';').join(' | ')),
+      };
+    })()`).catch(() => null);
+    check(
+      'per-syllable bounce is applied to the sung syllable',
+      !!bounce && bounce.found && bounce.animated >= 1,
+      bounce
+        ? 'animated=' + bounce.animated + ' active=' + JSON.stringify(bounce.activeText) + ' words=' + bounce.activeWords + ' ' + JSON.stringify(bounce.sampleStyles).slice(0, 220)
+        : 'n/a',
+    );
+
+    await cdp.send('Page.navigate', { url: `${server.url}/demo/index-real.html` });
+    await waitFor(
+      async () => {
+        const s = await cdp.eval(STATUS_JS);
+        return s.status === 'ready' && s.mounted === '1';
+      },
+      { timeoutMs: 25000, description: 'back to live demo' },
+    ).catch(() => null);
+    await cdp.eval('window.__spicyDemo.seekTo(26500)');
+    await sleep(700);
     await wake(cdp);
     await cdp.screenshot(join(SHOTS, 'e2e-word-sync.png'));
 
@@ -579,6 +638,45 @@ async function main() {
       `drift=${Math.round(drift)}ms rate=${clockInfo.rate}`,
     );
     check('rate correction stays subtle', clockInfo.rate >= 0.9 && clockInfo.rate <= 1.1, 'rate=' + clockInfo.rate);
+
+    // Park just before a line transition so at least one native highlight change
+    // (and therefore one clock anchor) must happen inside the sampling window.
+    const beforeLine = await cdp.eval(`(() => {
+      const payload = window.__spicyDemo && window.__spicyDemo.lastPayload;
+      const lines = payload && payload.lyrics && payload.lyrics.lines;
+      const now = window.__spicyDemo.state.pos;
+      if (!lines) return null;
+      for (const line of lines) {
+        const start = Number(line.startTimeMs);
+        if (Number.isFinite(start) && start > now + 600) return Math.round(start - 500);
+      }
+      return null;
+    })()`);
+    if (typeof beforeLine === 'number') {
+      await cdp.eval(`window.__spicyDemo.seekTo(${beforeLine})`);
+      await sleep(600);
+    }
+
+    // Latency at line transitions: with a 1 s-quantised seek bar the clock must
+    // stay close to the player instead of lagging a full quantisation step.
+    const lagPairs = [];
+    for (let i = 0; i < 72; i++) {
+      lagPairs.push(
+        JSON.parse(
+          await cdp.eval(`JSON.stringify({
+            pos: Number(document.documentElement.dataset.spicyPos || 0),
+            demo: window.__spicyDemo.state.pos,
+            anchors: Number(document.documentElement.dataset.spicyAnchors || 0),
+          })`),
+        ),
+      );
+      await sleep(60);
+    }
+    const lags = lagPairs.map((p) => p.demo - p.pos);
+    const maxLag = Math.max(...lags);
+    const lastAnchors = Math.max(...lagPairs.map((p) => p.anchors));
+    check('clock stays within 500 ms of the player after seeking', maxLag < 500, `maxLag=${Math.round(maxLag)}ms`);
+    check('native Spotify lyric highlight anchors the clock', lastAnchors >= 1, 'anchors=' + lastAnchors);
 
     await cdp.eval('window.__spicyDemo.seekTo(60000)');
     const seeked = await waitFor(

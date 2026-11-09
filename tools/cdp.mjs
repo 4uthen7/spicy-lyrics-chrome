@@ -133,6 +133,7 @@ export class Cdp {
     this.ws = ws;
     this.nextId = 0;
     this.pending = new Map();
+    this.handlers = new Map();
     ws.addEventListener('message', (ev) => {
       let message;
       try {
@@ -145,8 +146,18 @@ export class Cdp {
         this.pending.delete(message.id);
         if (message.error) reject(new Error(message.error.message + ' ' + JSON.stringify(message.error.data || '')));
         else resolve(message.result);
+      } else if (message.method) {
+        const list = this.handlers.get(message.method);
+        if (list) for (const handler of list) handler(message.params, message);
       }
     });
+  }
+
+  /** Subscribe to a CDP event: cdp.on('Runtime.executionContextCreated', fn). */
+  on(method, handler) {
+    if (!this.handlers.has(method)) this.handlers.set(method, new Set());
+    this.handlers.get(method).add(handler);
+    return () => this.handlers.get(method).delete(handler);
   }
 
   static async connect(webSocketDebuggerUrl) {

@@ -98,6 +98,8 @@
       seekSeq: 0,
       /** Where the current clock reading came from: 'media' | 'dom' | 'none'. */
       source: 'none',
+      /** Count of forward corrections applied from Spotify's own lyric highlight. */
+      anchors: 0,
     },
     /** @type {SL.LyricsDoc|null} */
     lyrics: null,

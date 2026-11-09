@@ -107,7 +107,7 @@
   display: block;
   position: relative;
   transform-origin: center center;
-  transition: transform 0.5s var(--sl-ease, ease);
+  transition: transform 0.4s var(--sl-ease, ease);
 }
 
 .sl-line {
@@ -127,9 +127,9 @@
   filter: blur(var(--b, 0px));
   opacity: var(--o, 1);
   transition:
-    transform 0.5s var(--sl-ease, ease),
-    filter 0.5s ease,
-    opacity 0.5s ease;
+    transform 0.34s var(--sl-ease, ease),
+    filter 0.2s ease-out,
+    opacity 0.18s ease-out;
   will-change: transform, filter, opacity;
 }
 
@@ -218,35 +218,47 @@
 
 .sl-w,
 .sl-t {
+  --sl-sung: 0.94;
+  --sl-unsung: 0.5;
+  --sl-fade: 0.22em;
   color: transparent;
-  background-color: var(--sl-word-dim, rgba(255, 255, 255, 0.34));
+  /* A 2x-wide gradient (dim half, soft fade, bright half) slid across each
+     word by --p, so the sung edge is a moving fade instead of a hard cut.
+     Ported from Spicy Lyrics' lyric sweep (RefreshedSweep / --SLM_GradientPosition). */
   background-image: linear-gradient(
-    100deg,
-    var(--sl-hl-1, #ffffff) 0%,
-    var(--sl-hl-2, #ffd7e4) 62%,
-    var(--sl-hl-1, #ffffff) 100%
+    90deg,
+    rgba(255, 255, 255, var(--sl-unsung)) calc(50% - var(--sl-fade) / 2),
+    rgba(255, 255, 255, var(--sl-sung)) calc(50% + var(--sl-fade) / 2)
   );
   background-repeat: no-repeat;
-  background-size: calc(var(--p, 0) * 100%) 100%;
+  background-size: calc(200% + var(--sl-fade)) 100%;
+  background-position: calc(var(--p, 0) * 100%) 0;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  /* Per-syllable bounce: scale 0.95 -> 1.05 -> 1, a small upward kick and a
+     glow that blooms as the syllable is sung (ranges from Spicy's animator). */
+  display: inline-block;
+  transform-origin: 50% 80%;
+  transform: translateY(var(--wy, 0em)) scale(var(--ws, 1));
+  text-shadow: 0 0 var(--wb, 0px) rgba(255, 255, 255, var(--wo, 0));
 }
 
 .sl-lyrics[data-highlight="solid"] .sl-w,
 .sl-lyrics[data-highlight="solid"] .sl-t {
-  background-image: linear-gradient(
-    90deg,
-    var(--sl-hl-1, #ffffff),
-    var(--sl-hl-1, #ffffff)
-  );
+  --sl-sung: 1;
+  --sl-unsung: 0.72;
+  --sl-fade: 0.18em;
 }
 
-/* The word currently being sung gets a soft accent bloom. */
-.sl-w.is-active {
-  text-shadow:
-    0 0 16px var(--sl-accent-soft, rgba(255, 92, 138, 0.55)),
-    0 0 40px var(--sl-accent-faint, rgba(255, 92, 138, 0.22));
+/* Simple mode: flat text, stronger contrast, wider fade (Spicy SimpleLyrics). */
+.sl-lyrics[data-mode="simple"] .sl-w,
+.sl-lyrics[data-mode="simple"] .sl-t {
+  --sl-sung: 1;
+  --sl-unsung: 0.34;
+  --sl-fade: 0.5em;
+  transform: none;
+  text-shadow: none;
 }
 
 /* ------------------------------------------------------------------------- */

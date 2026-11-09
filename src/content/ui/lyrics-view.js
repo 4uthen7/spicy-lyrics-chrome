@@ -48,8 +48,11 @@
 
   const ANCHOR = 0.42; // active line rests here (fraction of stage height)
   const NEAR = 7; // rows kept painted around the active line
-  const SPRING_K = 168;
-  const SPRING_C = 2 * Math.sqrt(SPRING_K) * 0.84;
+  // Slightly stiffer than a pure "floaty" spring: line-to-line moves should
+  // settle in roughly 300 ms (Spicy/Beautiful feel) instead of half a second,
+  // without overshooting into the next line.
+  const SPRING_K = 232;
+  const SPRING_C = 2 * Math.sqrt(SPRING_K) * 0.9;
   const INTERLUDE_GAP_MS = 3500;
   const MAX_MANUAL_SCROLL = 0.34; // fraction of stage height
 
@@ -494,7 +497,9 @@
 
     function applyActive(idx, force) {
       if (idx === activeIdx && !force) return;
+      const previous = activeIdx;
       activeIdx = idx;
+      resetRowAnimations(rowByLine[previous]);
       for (const row of rows) {
         const distance = Math.abs((row.anchor == null ? row.lineIdx : row.anchor) - idx);
         let level;
@@ -518,6 +523,72 @@
         activeWordEl = null;
       }
       repaintOffscreenLines();
+    }
+
+    // --- Per-syllable bounce -------------------------------------------------
+    // Ranges ported from Spicy Lyrics' LyricsAnimator (ScaleRange /
+    // LetterScaleRange / YOffsetRange / GlowRange) as smooth curves instead of
+    // splines: scale 0.95 -> 1.05 -> 1, a small upward kick, and a glow that
+    // blooms early and fades as the syllable finishes.
+    function smooth01(t) {
+      t = util.clamp(t, 0, 1);
+      return t * t * (3 - 2 * t);
+    }
+
+    function wordAnimation(p) {
+      const t = util.clamp(p, 0, 1);
+      const scale =
+        t < 0.7
+          ? 0.95 + (1.0505 - 0.95) * smooth01(t / 0.7)
+          : 1.0505 + (1 - 1.0505) * smooth01((t - 0.7) / 0.3);
+      const y =
+        t < 0.9
+          ? 0.01 + (-1 / 60 - 0.01) * smooth01(t / 0.9)
+          : (-1 / 60) * (1 - smooth01((t - 0.9) / 0.1));
+      let glow;
+      if (t <= 0.15) glow = smooth01(t / 0.15);
+      else if (t <= 0.6) glow = 1;
+      else glow = 1 - smooth01((t - 0.6) / 0.4);
+      return { scale, y, glow };
+    }
+
+    function setWordAnimation(word, p) {
+      const anim = wordAnimation(p);
+      const cache = word.anim || (word.anim = {});
+      const scale = Math.round(anim.scale * 1000) / 1000;
+      const y = Math.round(anim.y * 10000) / 10000;
+      const glow = Math.round(anim.glow * 100) / 100;
+      if (cache.scale !== scale) {
+        cache.scale = scale;
+        word.el.style.setProperty('--ws', scale.toFixed(3));
+      }
+      if (cache.y !== y) {
+        cache.y = y;
+        word.el.style.setProperty('--wy', y.toFixed(4) + 'em');
+      }
+      if (cache.glow !== glow) {
+        cache.glow = glow;
+        word.el.style.setProperty('--wb', (1 + 13 * glow).toFixed(1) + 'px');
+        word.el.style.setProperty('--wo', (0.06 + 0.62 * glow).toFixed(3));
+      }
+      cache.on = true;
+    }
+
+    function resetWordAnimation(word) {
+      if (!word || !word.anim || !word.anim.on) return;
+      word.anim.on = false;
+      word.anim.scale = 1;
+      word.anim.y = 0;
+      word.anim.glow = 0;
+      word.el.style.setProperty('--ws', '1');
+      word.el.style.setProperty('--wy', '0em');
+      word.el.style.setProperty('--wb', '0px');
+      word.el.style.setProperty('--wo', '0');
+    }
+
+    function resetRowAnimations(row) {
+      if (!row || !row.words) return;
+      for (const word of row.words) resetWordAnimation(word);
     }
 
     function paintActiveRow(pos) {
@@ -546,7 +617,12 @@
             word.lastP = p;
             word.el.style.setProperty('--p', p.toFixed(4));
           }
-          if (p > 0 && p < 1) activeWord = word.el;
+          if (p > 0 && p < 1) {
+            activeWord = word.el;
+            setWordAnimation(word, p);
+          } else if (word.anim && word.anim.on) {
+            resetWordAnimation(word);
+          }
         }
         if (activeWord !== activeWordEl) {
           if (activeWordEl) activeWordEl.classList.remove('is-active');
