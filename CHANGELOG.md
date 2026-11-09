@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] — 2026-11-09
+
+### Fixed
+
+- **Lyrics jumped to a distant line, or re-read a finished line, at line
+  boundaries.** Two changes from 1.2.1 combined badly: the "clock is ahead of
+  Spotify's highlight" correction pulled the clock *backwards* (so the renderer
+  re-read the previous line), and the text→line mapping accepted any line within
+  4 s (so a repeated chorus line could map to a wrong, distant row). Removed the
+  backward correction entirely; the anchor is now forward-only, requires the same
+  highlight on two consecutive 80 ms samples, requires an unambiguous text match
+  within 1.6 s, and is capped at 450 ms (well under a line).
+- The renderer additionally keeps the painted position monotonic between seeks
+  and offset changes, so no clock hiccup can rewind the words.
+
+### Verification
+
+- e2e: 48/48, including a 9 s line-progression trace (no backward steps, no step
+  larger than one line) under a one-second-quantised position source.
+
 ## [1.2.1] — 2026-11-09
 
 ### Fixed

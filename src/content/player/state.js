@@ -184,7 +184,7 @@
     anchors: 0,
     lastDomValue: null,
     nativeLineKey: null,
-    lastEarlyKey: null,
+    nativeLineSeen: 0,
   };
 
   /** Jump beyond this is a real seek (or a badly desynced clock), not jitter. */
@@ -927,53 +927,55 @@
         }
       }
       const distance = Math.abs(start - now);
-      if (distance > 4000) continue;
-      if (!best || distance < best.distance) best = { start, nextStart, index: i, distance };
+      // Only lines close enough to be the line we are actually in. A wider
+      // window let a repeated chorus line map to a far-away duplicate.
+      if (distance > 1600) continue;
+      if (!best || distance < best.distance) {
+        best = { start, nextStart, index: i, distance, matches: 1 };
+      } else if (distance === best.distance) {
+        best.matches += 1;
+      }
     }
     return best;
   }
 
   /**
-   * Syncs the extension clock to Spotify's own lyric highlight.
+   * Syncs the extension clock forward to Spotify's own lyric highlight.
    *
-   * Forward: when the native view has already moved to a line whose start time
-   * is ahead of our clock, jump to it (this is what keeps line changes from
-   * waiting for the coarse seek bar).
+   * Only forward, small corrections are applied:
+   *   - the same highlighted line must be seen on two consecutive samples
+   *     (a transient or mis-detected highlight must never move the clock),
+   *   - the text must map to exactly one nearby lyric line (a repeated chorus
+   *     line is ambiguous),
+   *   - the target must be 20-700 ms ahead, so a line change is advanced
+   *     promptly without ever jumping over lines.
    *
-   * Backward: if the native view is still on line k but our clock has already
-   * run past line k+1's start, the clock is early; pull it back into line k.
-   * This second direction is what removes a constant "lyrics are ahead" bias.
-   *
-   * Both directions are bounded to one line and only apply when the mismatch is
-   * large enough to be real, so normal polling noise never moves the clock.
+   * There is deliberately no backward correction: pulling the clock back is
+   * what made the renderer re-read a line it had already finished.
    */
   function anchorToNativeLine() {
     if (!isNativeLyricsOpen()) {
       diag.nativeLineKey = null;
+      diag.nativeLineSeen = 0;
       return;
     }
     const active = nativeActiveLine();
     if (!active) return;
-    const info = lineInfoForText(active.text);
-    if (!info) return;
-    const now = store.positionNow();
-    const lineKey = info.start + ':' + active.text;
-    const early = info.nextStart != null && now > info.nextStart + 150 && now - (info.start + 120) < 2500;
-
-    if (early) {
-      if (diag.lastEarlyKey === lineKey) return;
-      diag.lastEarlyKey = lineKey;
-      store.setPlayback(info.start + 120, true, { exact: true });
-      diag.anchors += 1;
-      store.patch({ playback: { anchors: diag.anchors } });
+    if (active.key !== diag.nativeLineKey) {
+      diag.nativeLineKey = active.key;
+      diag.nativeLineSeen = 1;
       return;
     }
-    diag.lastEarlyKey = null;
-    if (active.key === diag.nativeLineKey) return;
-    diag.nativeLineKey = active.key;
-    // Only a forward correction inside one line's length; a larger jump would
-    // mean the line mapping picked the wrong row, so ignore it.
-    if (info.start <= now + 20 || info.start - now > 1500) return;
+    if (diag.nativeLineSeen < 2) {
+      diag.nativeLineSeen = 2;
+      return;
+    }
+    const info = lineInfoForText(active.text);
+    if (!info || info.matches !== 1) return;
+    const now = store.positionNow();
+    const delta = info.start - now;
+    // Keep the hop bounded so a very short line cannot leap several rows.
+    if (delta <= 20 || delta > 450) return;
     store.setPlayback(info.start + 40, true, { exact: true });
     diag.anchors += 1;
     store.patch({ playback: { anchors: diag.anchors } });

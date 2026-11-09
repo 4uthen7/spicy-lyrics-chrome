@@ -123,7 +123,7 @@ Web Player が返す再生位置は刻みが粗く（シークバーの隠し in
 
 行の切り替えは視線より遅れないよう、非アクティブ行の減光・ブラーは 0.18〜0.2 秒、スクロールのスプリングは約 300ms で収束します（以前は 0.5 秒）。
 
-アンカーは 80ms 間隔で Spotify のハイライトを読み、**前方だけでなく後方にも**補正します（クロックが次の行境界を越えているのに Spotify がまだ前の行を指していれば、その行へ戻す）。これで「歌詞が先行する」一定バイアスも消えます。`Copy diagnostics` の `playback.clockSource` / `rate` / `anchors` / `clockSamples` で、どのクロックを使い何回アンカーしたか、どれだけズレていたかが分かります。曲ごとの微妙なズレは設定の Offset（±10ms 刻み、オーバーレイでは `↑`/`↓`、パネルに ±10 / ±100）で調整できます。
+アンカーは 80ms 間隔で Spotify のハイライトを読み、**前方にだけ**小さく補正します（同じハイライトが2回続けて観測されたときだけ、テキストが一意に 1 行へ対応し、かつ 450ms 以内のズレのとき）。後方補正はしないので、読み終えた行を読み直すことはありません。レンダラ側でもシーク以外では描画位置を後退させません。`Copy diagnostics` の `playback.clockSource` / `rate` / `anchors` / `clockSamples` で、どのクロックを使い何回アンカーしたか、どれだけズレていたかが分かります。曲ごとの微妙なズレは設定の Offset（±10ms 刻み、オーバーレイでは `↑`/`↓`、パネルに ±10 / ±100）で調整できます。
 
 ### パース
 
@@ -184,11 +184,11 @@ node tools/build.mjs            # dist/prod + dist/spicy-lyrics-chrome-<ver>.zip
 node tools/build.mjs --target dev   # dist/dev（デモ用ホスト権限つき）
 node tools/test-lyrics.mjs      # パーサ/スニファのユニットテスト（19 件）
 node tools/serve.mjs --port 8787    # デモ用 Spotify モック（http://127.0.0.1:8787/demo/）
-node tools/e2e.mjs              # 実 Chrome に拡張をロードして 46 項目を検証
+node tools/e2e.mjs              # 実 Chrome に拡張をロードして 48 項目を検証
 node tools/verify-prod.mjs      # prod パッケージを実 Chrome でロードして 10 項目を検証
 ```
 
-`tools/e2e.mjs` は Chrome for Testing（`/tmp/cft/...`、`CHROME_BIN` で指定可）に `dist/dev` を実際にロードし、2 種類のモックページと固定時刻の描画ラボを操作して 46 項目を検証、スクリーンショットを `docs/screenshots/` に保存する。結果は `46/46 checks passed`。
+`tools/e2e.mjs` は Chrome for Testing（`/tmp/cft/...`、`CHROME_BIN` で指定可）に `dist/dev` を実際にロードし、2 種類のモックページと固定時刻の描画ラボを操作して 48 項目を検証、スクリーンショットを `docs/screenshots/` に保存する。結果は `48/48 checks passed`。
 
 - `demo/`（従来型 DOM）: content script 起動、プレイヤー状態、bootstrap による歌詞読み取り、word 同期、マウント、単語塗りの進行、ライン同期、歌詞なし、ランチャー、設定パネル、ポップアップ、パネル/ミニマルモード、ページ例外ゼロ
 - `demo/index-real.html`（2026 ビルドの実 DOM 形状）: `/track/` リンクが無い状態からの sniff による track id 昇格、隠し `<input type=range>` からの再生位置、`lyrics-line` のユニーククラストークン、`.main-view-container` クラスへの追従

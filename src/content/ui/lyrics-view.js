@@ -120,6 +120,8 @@
     let uSmooth = 0;
     let lastNow = 0;
     let lastSeekSeq = -1;
+    let lastRenderedPos = -1;
+    let lastRenderedOffset = 0;
     let activeIdx = -1;
     let activeWordEl = null;
     let activeProgress = 0;
@@ -796,12 +798,25 @@
       if (measureDirty) return; // still no geometry (hidden overlay)
 
       const playback = state.playback || {};
-      const pos = currentPos();
+      let pos = currentPos();
       let snap = false;
 
       if (playback.seekSeq !== lastSeekSeq) {
         lastSeekSeq = playback.seekSeq;
         snap = true;
+      }
+      // Safety net against any clock hiccup: never walk the words backwards
+      // between seeks. A stale/anchor correction that moved the clock back used
+      // to make a finished line re-read itself; that is worse than a few ms of
+      // lag, so the rendered position is monotonic per offset setting.
+      const offsetNow = Number(settings.offsetMs) || 0;
+      if (snap || offsetNow !== lastRenderedOffset) {
+        lastRenderedOffset = offsetNow;
+        lastRenderedPos = pos;
+      } else if (pos < lastRenderedPos - 120) {
+        pos = lastRenderedPos;
+      } else {
+        lastRenderedPos = pos;
       }
 
       const idx = activeIndexAt(pos);

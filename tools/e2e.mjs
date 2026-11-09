@@ -730,6 +730,42 @@ async function main() {
     check('clock stays within 500 ms of the player after seeking', maxLag < 500, `maxLag=${Math.round(maxLag)}ms`);
     check('native Spotify lyric highlight anchors the clock', lastAnchors >= 1, 'anchors=' + lastAnchors);
 
+    // ---------------------------------------------------------------------
+    // Line progression: no re-reading a finished line, no jumping across lines
+    // ---------------------------------------------------------------------
+    await cdp.eval('window.__spicyDemo.seekTo(20000)');
+    await sleep(800);
+    const lineTrail = [];
+    for (let i = 0; i < 60; i++) {
+      const idx = await cdp.eval(`(() => {
+        const host = document.querySelector('#spicy-lyrics');
+        const sr = host && host.shadowRoot;
+        if (!sr) return -1;
+        const row = [...sr.querySelectorAll('.sl-row')].find((r) => r.dataset.level === '0');
+        if (!row || row.dataset.line == null) return -1;
+        return Number(row.dataset.line);
+      })()`).catch(() => -1);
+      if (idx >= 0) lineTrail.push(idx);
+      await sleep(150);
+    }
+    let rewinds = 0;
+    let maxLineStep = 0;
+    for (let i = 1; i < lineTrail.length; i++) {
+      const step = lineTrail[i] - lineTrail[i - 1];
+      if (step < 0) rewinds += 1;
+      maxLineStep = Math.max(maxLineStep, step);
+    }
+    check(
+      'line progression never re-reads a finished line',
+      rewinds === 0,
+      `rewinds=${rewinds} trail=${lineTrail.slice(0, 20).join(',')}`,
+    );
+    check(
+      'line progression never jumps across distant lines',
+      maxLineStep <= 2,
+      `maxStep=${maxLineStep} lines=${lineTrail.length}`,
+    );
+
     await cdp.eval('window.__spicyDemo.seekTo(60000)');
     const seeked = await waitFor(
       async () => {
