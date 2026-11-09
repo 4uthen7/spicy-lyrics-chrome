@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Spicy Lyrics for Chrome",
   "short_name": "Spicy Lyrics",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Word-by-word animated lyrics for the Spotify web player, rendered the way the Spicy Lyrics desktop extension does it.",
   "minimum_chrome_version": "120",
   "icons": {

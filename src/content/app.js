@@ -10,7 +10,7 @@
   const SL = globalThis.SL;
   if (!SL || !SL.store || SL.app) return;
 
-  const VERSION = '1.2.0';
+  const VERSION = '1.2.1';
   const LOG = (...args) => console.log('[spicy]', ...args);
 
   const HOST_SELECTORS = {

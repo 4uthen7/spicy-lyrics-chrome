@@ -466,6 +466,7 @@
     wordHighlight: Q.get('hl') === 'solid' ? 'solid' : 'gradient',
     showInterludeDots: Q.get('dots') !== '0',
     reduceMotion: Q.get('motion') === '0',
+    offsetMs: num('offset', 0),
     lyricMode: (() => {
       const value = (Q.get('lyric_mode') || Q.get('lyricMode') || '').toLowerCase();
       return value === 'flow' || value === 'simple' ? value : 'cinema';

@@ -257,6 +257,58 @@ async function main() {
         sampleStyles: activeWords.slice(0, 3).map((w) => (w.getAttribute('style') || '').split(';').join(' | ')),
       };
     })()`).catch(() => null);
+    // Direction of the karaoke sweep. The bright half of the gradient must sit
+    // on the left of the word and the background window must slide from the
+    // dim end (position 100%) to the bright end (0%), i.e. fill left -> right.
+    const sweep = await cdp.eval(`(() => {
+      const host = document.querySelector('#spicy-lyrics');
+      const sr = host && host.shadowRoot;
+      if (!sr) return null;
+      const active = [...sr.querySelectorAll('.sl-row')].find((r) => r.dataset.level === '0');
+      const word = active && active.querySelector('.sl-w');
+      if (!word) return null;
+      const style = word.getAttribute('style') || '';
+      const at = style.indexOf('--p:');
+      const p = at === -1 ? 0 : parseFloat(style.slice(at + 4));
+      const computed = getComputedStyle(word);
+      return { p, position: computed.backgroundPosition, image: computed.backgroundImage };
+    })()`);
+    let sweepOk = false;
+    let sweepDetail = 'no active word';
+    if (sweep) {
+      const expected = (1 - sweep.p) * 100;
+      const match = /(-?[0-9.]+)%/.exec(sweep.position || '');
+      const actual = match ? Number(match[1]) : NaN;
+      const brightFirst = /rgba?\(255, 255, 255, 0\.94\)/.test(sweep.image) &&
+        sweep.image.indexOf('0.94') < sweep.image.indexOf('0.5)');
+      sweepOk = Number.isFinite(actual) && Math.abs(actual - expected) < 2 && brightFirst && sweep.p > 0.05 && sweep.p < 0.95;
+      sweepDetail = `p=${Number(sweep.p).toFixed(3)} position=${sweep.position} expected≈${expected.toFixed(1)}% brightFirst=${brightFirst}`;
+    }
+    check('karaoke sweep fills left to right', sweepOk, sweepDetail);
+
+    // Positive offset must delay the lyrics (show an earlier line).
+    await cdp.send('Page.navigate', { url: `${server.url}/demo/render-lab.html?t=26750&solo=1&offset=3000` });
+    await waitFor(
+      async () =>
+        cdp
+          .eval("!!(document.querySelector('#spicy-lyrics') && document.querySelector('#spicy-lyrics').shadowRoot && document.querySelector('#spicy-lyrics').shadowRoot.querySelectorAll('.sl-row').length > 5)")
+          .catch(() => false),
+      { timeoutMs: 15000, description: 'offset lab' },
+    ).catch(() => null);
+    await sleep(500);
+    const offsetActive = await cdp.eval(`(() => {
+      const host = document.querySelector('#spicy-lyrics');
+      const sr = host && host.shadowRoot;
+      if (!sr) return null;
+      const active = [...sr.querySelectorAll('.sl-row')].find((r) => r.dataset.level === '0');
+      return active ? active.textContent.trim().slice(0, 40) : null;
+    })()`);
+    check(
+      'positive sync offset delays the lyrics',
+      !!offsetActive && offsetActive !== 'Hold the wide shot',
+      'active=' + JSON.stringify(offsetActive),
+    );
+
     check(
       'per-syllable bounce is applied to the sung syllable',
       !!bounce && bounce.found && bounce.animated >= 1,

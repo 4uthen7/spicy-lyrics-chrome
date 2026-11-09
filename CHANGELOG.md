@@ -4,6 +4,34 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] — 2026-11-09
+
+### Fixed
+
+- **Karaoke sweep direction was right-to-left.** The 2x-wide dim→bright gradient
+  was paired with an increasing `background-position`, which slides the image
+  right and therefore moves the bright edge from the right of the word towards
+  the left. The gradient now starts bright and the position runs from 100% to 0%
+  (`calc((1 - --p) * 100%)`), matching Spicy Lyrics' mapping, so the fill sweeps
+  left to right.
+- **Offset was applied twice for cached/DOM-derived documents.** Cached documents
+  and learned DOM timings carry a baked-in offset (`doc.offsetMs`) while the
+  renderer also added the user offset to the clock. Documents are now
+  canonicalised on read/publish so the offset is applied exactly once.
+- **Offset direction was inverted relative to its labels.** Positive offset now
+  delays the lyrics ("+ = later"), matching the popup and overlay panel labels.
+- **Sync anchor lag.** The native lyric highlight was only sampled on the 250 ms
+  player poll, so anchors landed up to a quarter second late. A dedicated 80 ms
+  timer now samples it, and the anchor is bidirectional: when the clock has
+  already run past the highlighted line's successor (lyrics ahead) it is pulled
+  back into the highlighted line, which removes a constant early bias.
+
+### Verification
+
+- e2e: 46/46, including a computed-style check of the sweep (p=0.565 maps to
+  background-position 43.5%, bright stop first) and a check that a +3000 ms offset
+  shows an earlier line.
+
 ## [1.2.0] — 2026-11-09
 
 Visuals and line transitions now follow the desktop Spicy Lyrics / Beautiful

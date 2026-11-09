@@ -154,6 +154,7 @@
 
   let started = false;
   let pollTimer = 0;
+  let anchorTimer = 0;
   let mutationTimer = 0;
   let observer = null;
   let lastTrackSignature = '';
@@ -183,6 +184,7 @@
     anchors: 0,
     lastDomValue: null,
     nativeLineKey: null,
+    lastEarlyKey: null,
   };
 
   /** Jump beyond this is a real seek (or a badly desynced clock), not jitter. */
@@ -894,27 +896,56 @@
     return null;
   }
 
-  /** Maps the native view's active line text onto the resolved doc's lines. */
-  function lineStartForText(text) {
+  /**
+   * Maps the native view's active line text onto the resolved doc's lines.
+   * Repeated lines (chorus) mean a text match is ambiguous, so pick the
+   * candidate whose start is closest to the current position.
+   */
+  function lineInfoForText(text) {
     const lyrics = store.get().lyrics;
     if (!lyrics || !Array.isArray(lyrics.lines) || !text) return null;
     const wanted = text.toLowerCase().replace(/\s+/g, '');
     if (!wanted) return null;
-    for (const line of lyrics.lines) {
+    const now = store.positionNow();
+    let best = null;
+    for (let i = 0; i < lyrics.lines.length; i++) {
+      const line = lyrics.lines[i];
       if (!line || line.isInterlude) continue;
       const own = String(line.text || '').toLowerCase().replace(/\s+/g, '');
-      if (own && (own === wanted || own.includes(wanted) || wanted.includes(own))) {
-        const start = Number(line.startMs);
-        if (isFinite(start) && start > 0) return start;
+      if (!own) continue;
+      if (!(own === wanted || own.includes(wanted) || wanted.includes(own))) continue;
+      const start = Number(line.startMs);
+      if (!isFinite(start) || start < 0) continue;
+      let nextStart = null;
+      for (let j = i + 1; j < lyrics.lines.length; j++) {
+        const next = lyrics.lines[j];
+        if (!next || next.isInterlude) continue;
+        const value = Number(next.startMs);
+        if (isFinite(value) && value > start) {
+          nextStart = value;
+          break;
+        }
       }
+      const distance = Math.abs(start - now);
+      if (distance > 4000) continue;
+      if (!best || distance < best.distance) best = { start, nextStart, index: i, distance };
     }
-    return null;
+    return best;
   }
 
   /**
-   * Pulls the clock forward when Spotify's own lyric view advances. Never moves
-   * it backwards: if the extension clock is already at or past that line, the
-   * anchor is ignored.
+   * Syncs the extension clock to Spotify's own lyric highlight.
+   *
+   * Forward: when the native view has already moved to a line whose start time
+   * is ahead of our clock, jump to it (this is what keeps line changes from
+   * waiting for the coarse seek bar).
+   *
+   * Backward: if the native view is still on line k but our clock has already
+   * run past line k+1's start, the clock is early; pull it back into line k.
+   * This second direction is what removes a constant "lyrics are ahead" bias.
+   *
+   * Both directions are bounded to one line and only apply when the mismatch is
+   * large enough to be real, so normal polling noise never moves the clock.
    */
   function anchorToNativeLine() {
     if (!isNativeLyricsOpen()) {
@@ -923,15 +954,27 @@
     }
     const active = nativeActiveLine();
     if (!active) return;
+    const info = lineInfoForText(active.text);
+    if (!info) return;
+    const now = store.positionNow();
+    const lineKey = info.start + ':' + active.text;
+    const early = info.nextStart != null && now > info.nextStart + 150 && now - (info.start + 120) < 2500;
+
+    if (early) {
+      if (diag.lastEarlyKey === lineKey) return;
+      diag.lastEarlyKey = lineKey;
+      store.setPlayback(info.start + 120, true, { exact: true });
+      diag.anchors += 1;
+      store.patch({ playback: { anchors: diag.anchors } });
+      return;
+    }
+    diag.lastEarlyKey = null;
     if (active.key === diag.nativeLineKey) return;
     diag.nativeLineKey = active.key;
-    const start = lineStartForText(active.text);
-    if (start == null) return;
-    const now = store.positionNow();
     // Only a forward correction inside one line's length; a larger jump would
     // mean the line mapping picked the wrong row, so ignore it.
-    if (start <= now + 20 || start - now > 1500) return;
-    store.setPlayback(start, true, { exact: true });
+    if (info.start <= now + 20 || info.start - now > 1500) return;
+    store.setPlayback(info.start + 40, true, { exact: true });
     diag.anchors += 1;
     store.patch({ playback: { anchors: diag.anchors } });
   }
@@ -1097,6 +1140,15 @@
     pollOnce();
 
     pollTimer = setInterval(pollOnce, POLL_MS);
+    // The native highlight changes between player polls; a faster timer makes
+    // the clock anchor land much closer to the real line transition.
+    anchorTimer = setInterval(() => {
+      try {
+        if (started && store.get().playback.isPlaying) anchorToNativeLine();
+      } catch (err) {
+        noteError(err);
+      }
+    }, 80);
 
     if (typeof MutationObserver === 'function') {
       observer = new MutationObserver(schedulePoll);
@@ -1120,6 +1172,8 @@
     if (!started) return;
     started = false;
     clearInterval(pollTimer);
+    clearInterval(anchorTimer);
+    anchorTimer = 0;
     clearTimeout(mutationTimer);
     pollTimer = 0;
     mutationTimer = 0;

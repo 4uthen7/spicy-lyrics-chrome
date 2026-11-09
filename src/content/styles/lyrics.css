@@ -222,17 +222,20 @@
   --sl-unsung: 0.5;
   --sl-fade: 0.22em;
   color: transparent;
-  /* A 2x-wide gradient (dim half, soft fade, bright half) slid across each
+  /* A 2x-wide gradient (bright half, soft fade, dim half) slid across each
      word by --p, so the sung edge is a moving fade instead of a hard cut.
-     Ported from Spicy Lyrics' lyric sweep (RefreshedSweep / --SLM_GradientPosition). */
+     The position runs from 100% (all dim) down to 0% (all bright): increasing
+     background-position moves the image right, which would sweep the fill
+     right-to-left, so the mapping is inverted. Ported from Spicy Lyrics'
+     lyric sweep (RefreshedSweep / --SLM_GradientPosition). */
   background-image: linear-gradient(
     90deg,
-    rgba(255, 255, 255, var(--sl-unsung)) calc(50% - var(--sl-fade) / 2),
-    rgba(255, 255, 255, var(--sl-sung)) calc(50% + var(--sl-fade) / 2)
+    rgba(255, 255, 255, var(--sl-sung)) calc(50% - var(--sl-fade) / 2),
+    rgba(255, 255, 255, var(--sl-unsung)) calc(50% + var(--sl-fade) / 2)
   );
   background-repeat: no-repeat;
   background-size: calc(200% + var(--sl-fade)) 100%;
-  background-position: calc(var(--p, 0) * 100%) 0;
+  background-position: calc((1 - var(--p, 0)) * 100%) 0;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;

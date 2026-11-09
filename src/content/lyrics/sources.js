@@ -213,13 +213,24 @@
     };
   }
 
+  /**
+   * Docs may carry a baked-in offset from an older build (cache entries, or a
+   * DOM scrape that shifted its learned timings). The renderer applies the
+   * user's offset exactly once, so strip any baked offset here. Without this a
+   * non-zero offset was applied twice (once in the doc, once in the clock).
+   */
+  function canonicalize(doc) {
+    const baked = Number(doc && doc.offsetMs) || 0;
+    if (!baked) return doc;
+    return rebaseDoc(doc, -baked);
+  }
+
   async function readCache(trackId) {
     try {
       if (!store || typeof store.readCache !== 'function') return null;
       const doc = await store.readCache(trackId);
       if (!isDoc(doc) || doc.trackId !== trackId) return null;
-      const delta = offsetMs() - (Number(doc.offsetMs) || 0);
-      return rebaseDoc(doc, delta);
+      return canonicalize(doc);
     } catch {
       return null;
     }
@@ -245,6 +256,7 @@
   function publish(doc, trackId, seq) {
     if (!isDoc(doc)) return false;
     if (isStale(trackId, seq)) return false;
+    doc = canonicalize(doc);
     if (typeof doc.trackId !== 'string' || !doc.trackId) doc = { ...doc, trackId };
     store.setLyrics(doc, 'ready');
     cacheDoc(doc);

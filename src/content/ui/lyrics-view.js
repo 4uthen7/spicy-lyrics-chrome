@@ -370,7 +370,9 @@
 
     function currentPos() {
       if (!SL.store) return 0;
-      return SL.store.positionNow() + (Number(settings.offsetMs) || 0);
+      // Positive offset delays the lyrics (they trail the audio), matching the
+      // "+ = later" labels in the popup and the overlay panel.
+      return SL.store.positionNow() - (Number(settings.offsetMs) || 0);
     }
 
     function activeIndexAt(positionMs) {
